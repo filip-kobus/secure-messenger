@@ -4,11 +4,11 @@ from app.dependencies import get_query_token, get_token_header
 from app.internal import admin
 from app.routers import items, users, auth
 
-app = FastAPI(dependencies=[Depends(get_query_token)])
+app = FastAPI()
 
 
-app.include_router(users.router)
-app.include_router(items.router)
+app.include_router(users.router, dependencies=[Depends(get_query_token)])
+app.include_router(items.router, dependencies=[Depends(get_query_token)])
 app.include_router(auth.router)
 app.include_router(
     admin.router,
