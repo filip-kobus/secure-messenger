@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.auth import LoginRequest, RegisterRequest
 from app.models.users import User
 from app.crud.users import get_user_by_email, create_user
@@ -13,7 +13,7 @@ async def login(login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await get_user_by_email(db, login_data.email)
     if user and verify_password(login_data.password, user.password_hash):
         return {"message": "User logged in successfully"}
-    return {"message": "Invalid email or password"}, 401
+    raise HTTPException(status_code=401, detail="Invalid email or password")
 
 
 @router.post("/register/", tags=["auth"])

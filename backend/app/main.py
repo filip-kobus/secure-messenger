@@ -1,11 +1,15 @@
 from fastapi import Depends, FastAPI
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.dependencies import get_query_token, get_token_header
 from app.internal import admin
 from app.routers import items, users, auth
+from app.exceptions import ExceptionHandlers
+
 
 app = FastAPI()
 
+app.add_exception_handler(SQLAlchemyError, ExceptionHandlers.sqlalchemy_exception_handler)
 
 app.include_router(users.router, dependencies=[Depends(get_query_token)])
 app.include_router(items.router, dependencies=[Depends(get_query_token)])
