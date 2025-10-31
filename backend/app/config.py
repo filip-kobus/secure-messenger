@@ -3,3 +3,12 @@ ACCESS_EXPIRE_MINUTES = 15
 REFRESH_EXPIRE_DAYS = 7
 DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 IS_DEBUG_ENABLED = True
+class HashingConfig:
+    ALGORITHM = "argon2"
+    TYPE = "ID"
+    SALT_SIZE = 16
+    TIME_COST = 2
+    MEMORY_COST = 65536
+    PARALLELISM = 4
+    DIGEST_SIZE = 32
+    MAX_THREADS = -1
