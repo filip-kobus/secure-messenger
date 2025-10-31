@@ -9,7 +9,9 @@ from app.exceptions import ExceptionHandlers
 
 app = FastAPI()
 
-app.add_exception_handler(SQLAlchemyError, ExceptionHandlers.sqlalchemy_exception_handler)
+app.add_exception_handler(
+    SQLAlchemyError, ExceptionHandlers.sqlalchemy_exception_handler
+)
 
 app.include_router(users.router, dependencies=[Depends(get_query_token)])
 app.include_router(items.router, dependencies=[Depends(get_query_token)])

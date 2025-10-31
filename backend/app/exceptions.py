@@ -1,6 +1,7 @@
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
+from passlib.exc import Pass
 
 
 class ExceptionHandlers:
