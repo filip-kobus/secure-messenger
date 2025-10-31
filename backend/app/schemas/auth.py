@@ -1,25 +1,39 @@
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from app.config import UserCredentialsConfig
 import re
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr = Field(max_length=254)  # RFC 5321 max length
-    password: str = Field(min_length=1, max_length=128)
+    email: EmailStr = Field(max_length=UserCredentialsConfig.EMAIL_MAX_LENGTH)
+    password: str = Field(
+        min_length=1, max_length=UserCredentialsConfig.PASSWORD_MAX_LENGTH
+    )
 
 
 class RegisterRequest(BaseModel):
-    username: str = Field(min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_-]+$")
-    email: EmailStr = Field(max_length=254)
-    password: str = Field(min_length=8, max_length=128)
+    username: str = Field(
+        min_length=UserCredentialsConfig.USERNAME_MIN_LENGTH,
+        max_length=UserCredentialsConfig.USERNAME_MAX_LENGTH,
+        pattern=r"^[a-zA-Z0-9_-]+$",
+    )
+    email: EmailStr = Field(max_length=UserCredentialsConfig.EMAIL_MAX_LENGTH)
+    password: str = Field(
+        min_length=UserCredentialsConfig.PASSWORD_MIN_LENGTH,
+        max_length=UserCredentialsConfig.PASSWORD_MAX_LENGTH,
+    )
 
     @field_validator("password")
     @classmethod
     def validate_password_strength(cls, v: str) -> str:
         """Validate password strength"""
-        if not re.search(r"[A-Z]", v):
+        if UserCredentialsConfig.REQUIRE_UPPERCASE and not re.search(r"[A-Z]", v):
             raise ValueError("Password must contain at least one uppercase letter")
-        if not re.search(r"[a-z]", v):
+        if UserCredentialsConfig.REQUIRE_LOWERCASE and not re.search(r"[a-z]", v):
             raise ValueError("Password must contain at least one lowercase letter")
-        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
+        if UserCredentialsConfig.REQUIRE_DIGIT and not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        if UserCredentialsConfig.REQUIRE_SPECIAL and not re.search(
+            r"[!@#$%^&*(),.?\":{}|<>]", v
+        ):
             raise ValueError("Password must contain at least one special character")
         return v

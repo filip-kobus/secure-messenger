@@ -5,6 +5,18 @@ DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 IS_DEBUG_ENABLED = True
 
 
+class UserCredentialsConfig:
+    USERNAME_MIN_LENGTH = 3
+    USERNAME_MAX_LENGTH = 50
+    PASSWORD_MIN_LENGTH = 8
+    PASSWORD_MAX_LENGTH = 64
+    EMAIL_MAX_LENGTH = 254
+    REQUIRE_UPPERCASE = True
+    REQUIRE_LOWERCASE = True
+    REQUIRE_DIGIT = True
+    REQUIRE_SPECIAL = True
+
+
 class HashingConfig:
     ALGORITHM = "argon2"
     TYPE = "ID"
