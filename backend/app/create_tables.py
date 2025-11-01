@@ -1,7 +1,7 @@
 import asyncio
 from app.db import engine, Base
 
-from app.models import users
+from app.models import users, tokens
 
 
 async def main():

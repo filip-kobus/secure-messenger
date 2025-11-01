@@ -18,3 +18,11 @@ async def create_user(db: AsyncSession, user: User) -> User:
     await db.commit()
     await db.refresh(new_user)
     return new_user
+
+
+async def add_refresh_token_to_user(
+    db: AsyncSession, user: User, refresh_token: str
+) -> None:
+    user.refresh_token = refresh_token
+    db.add(user)
+    await db.commit()

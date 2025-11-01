@@ -1,8 +1,17 @@
-ALGORITHM = "HS256"
-ACCESS_EXPIRE_MINUTES = 15
-REFRESH_EXPIRE_DAYS = 7
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 IS_DEBUG_ENABLED = True
+
+
+class JWTConfig:
+    ALGORITHM = "HS256"
+    ACCESS_EXPIRE_MINUTES = 15
+    REFRESH_EXPIRE_DAYS = 7
 
 
 class UserCredentialsConfig:
