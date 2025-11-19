@@ -27,4 +27,4 @@ app.include_router(
 
 @app.get("/")
 async def root():
-    return {"message": "Hello Bigger Applications!"}
+    return {"message": "Welcome in Secure Messenger!"}
