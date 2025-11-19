@@ -26,3 +26,9 @@ async def add_refresh_token_to_user(
     user.refresh_token = refresh_token
     db.add(user)
     await db.commit()
+
+
+async def list_usernames(db: AsyncSession) -> list[str]:
+    result = await db.execute(select(User.username))
+    usernames = result.scalars().all()
+    return usernames
