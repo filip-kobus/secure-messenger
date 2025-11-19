@@ -2,7 +2,7 @@ from app.models.tokens import RefreshToken
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, update
 from datetime import datetime, timezone, timedelta
-from app.utils.manage_tokens import is_token_expired
+from app.utils.tokens_manager import is_token_expired
 
 
 async def add_refresh_token(db: AsyncSession, user_id: int, token: str):

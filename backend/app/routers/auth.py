@@ -3,9 +3,9 @@ from app.schemas.auth import LoginRequest, RegisterRequest
 from app.models.users import User
 from app.crud.users import get_user_by_email, create_user
 from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token
-from app.utils.hash_password import verify_password, hash_password
+from app.utils.password_hasher import verify_password, hash_password
 from app.db import AsyncSession, get_db
-from app.utils.manage_tokens import create_access_token, create_refresh_token, refresh_access_token
+from app.utils.tokens_manager import create_access_token, create_refresh_token, refresh_access_token
 
 router = APIRouter()
 
