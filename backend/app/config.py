@@ -8,6 +8,16 @@ DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 IS_DEBUG_ENABLED = True
 
 
+class RateLimitConfig:
+    DEFAULT_LIMIT = "30/minute"
+    AUTH_LOGIN = "5/minute"
+    AUTH_REGISTER = "5/minute"
+    AUTH_REFRESH = "10/minute"
+    MESSAGES_SEND = "20/minute"
+    MESSAGES_FETCH = "60/minute"
+    ADMIN = "10/minute"
+
+
 class JWTConfig:
     ALGORITHM = "HS256"
     ACCESS_EXPIRE_MINUTES = 15

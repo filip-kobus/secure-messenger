@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from app.schemas.auth import LoginRequest, RegisterRequest
 from app.models.users import User
 from app.crud.users import get_user_by_email, create_user
 from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token
 from app.utils.password_hasher import verify_password, hash_password
+from app.utils.rate_limiter import limiter
+from app.config import RateLimitConfig
 from app.db import AsyncSession, get_db
 from app.utils.tokens_manager import create_access_token, create_refresh_token, refresh_access_token
 
@@ -11,7 +13,8 @@ router = APIRouter()
 
 
 @router.post("/login/", tags=["auth"])
-async def login(login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(RateLimitConfig.AUTH_LOGIN)
+async def login(request: Request, login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await get_user_by_email(db, login_data.email)
     if not user or not verify_password(login_data.password, user.password_hash):
         raise HTTPException(
@@ -32,7 +35,8 @@ async def login(login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/register/", tags=["auth"])
-async def register(register_data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit(RateLimitConfig.AUTH_REGISTER)
+async def register(request: Request, register_data: RegisterRequest, db: AsyncSession = Depends(get_db)):
     existing_user = await get_user_by_email(db, register_data.email)
     if existing_user:
         raise HTTPException(
@@ -52,7 +56,8 @@ async def register(register_data: RegisterRequest, db: AsyncSession = Depends(ge
 
 
 @router.post("/refresh-token/", tags=["auth"])
-async def refresh_token_endpoint(refresh_token: str, db: AsyncSession = Depends(get_db)):
+@limiter.limit(RateLimitConfig.AUTH_REFRESH)
+async def refresh_token_endpoint(request: Request, refresh_token: str, db: AsyncSession = Depends(get_db)):
     db_token = await check_refresh_token(db, refresh_token)
     if not db_token or db_token.revoked:
         raise HTTPException(
@@ -74,7 +79,8 @@ async def refresh_token_endpoint(refresh_token: str, db: AsyncSession = Depends(
     }
 
 @router.post("/logout/", tags=["auth"])
-async def logout(refresh_token: str, db: AsyncSession = Depends(get_db)):
+@limiter.limit(RateLimitConfig.AUTH_REFRESH)
+async def logout(request: Request, refresh_token: str, db: AsyncSession = Depends(get_db)):
     db_token = await check_refresh_token(db, refresh_token)
     if db_token:
         await revoke_refresh_token(db, refresh_token)
