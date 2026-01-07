@@ -37,3 +37,13 @@ class RegisterRequest(BaseModel):
         ):
             raise ValueError("Password must contain at least one special character")
         return v
+
+
+class TwoFactorVerifyRequest(BaseModel):
+    user_id: int
+    code: str
+
+
+class TwoFactorEnableResponse(BaseModel):
+    secret: str
+    qr_code: str

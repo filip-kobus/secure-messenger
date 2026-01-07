@@ -1,7 +1,7 @@
 from app.models.tokens import RefreshToken
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, update
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from app.utils.tokens_manager import is_token_expired
 
 
@@ -29,7 +29,7 @@ async def check_refresh_token(db: AsyncSession, token: str) -> RefreshToken | No
     result = await db.execute(
         select(RefreshToken).where(
             RefreshToken.token == token,
-            RefreshToken.revoked == False
+            not RefreshToken.revoked
         )
     )
     db_token = result.scalar_one_or_none()
