@@ -7,6 +7,7 @@ from app.utils.password_hasher import verify_password, hash_password
 from app.utils.rate_limiter import limiter
 from app.config import RateLimitConfig
 from app.db import AsyncSession, get_db
+from app.utils.totp_manager import verify_totp_code, decrypt_totp_secret
 from app.utils.tokens_manager import create_access_token, create_refresh_token, refresh_access_token
 
 router = APIRouter()
@@ -22,6 +23,24 @@ async def login(request: Request, login_data: LoginRequest, db: AsyncSession = D
             detail="Invalid email or password"
         )
     
+    totp_code = login_data.totp_code
+    if user.is_2fa_enabled and not totp_code:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="2FA enabled. Please verify TOTP code."
+        )
+    if user.is_2fa_enabled:
+        totp_secret = decrypt_totp_secret(user.totp_secret_encrypted)
+        if not verify_totp_code(totp_secret, str(totp_code)):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid TOTP code"
+            )
+    if user.totp_secret_encrypted and not user.is_2fa_enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="TOTP setup incomplete. Please enable 2FA."
+        )
     access_token = create_access_token({"sub": str(user.id)})
     refresh_token = create_refresh_token({"sub": str(user.id)})
     

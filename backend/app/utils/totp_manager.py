@@ -2,11 +2,22 @@ import pyotp
 import qrcode
 from io import BytesIO
 import base64
+from app.config import TOTP_ENCRYPTION_KEY
+from cryptography.fernet import Fernet
 
 
 def generate_totp_secret() -> str:
     return pyotp.random_base32()
 
+def encrypt_totp_secret(secret: str) -> str:
+    fernet = Fernet(TOTP_ENCRYPTION_KEY.encode())
+    encrypted = fernet.encrypt(secret.encode())
+    return encrypted.decode()
+
+def decrypt_totp_secret(encrypted_secret: str) -> str:
+    fernet = Fernet(TOTP_ENCRYPTION_KEY.encode())
+    decrypted = fernet.decrypt(encrypted_secret.encode())
+    return decrypted.decode()
 
 def generate_qr_code(username: str, secret: str, issuer: str = "SecureMessenger") -> str:
     totp = pyotp.TOTP(secret)
@@ -23,7 +34,6 @@ def generate_qr_code(username: str, secret: str, issuer: str = "SecureMessenger"
     img_str = base64.b64encode(buffered.getvalue()).decode()
     
     return f"data:image/png;base64,{img_str}"
-
 
 def verify_totp_code(secret: str, code: str) -> bool:
     totp = pyotp.TOTP(secret)

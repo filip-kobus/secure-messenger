@@ -1,4 +1,5 @@
 from app.models.users import User
+from app.models.tokens import RefreshToken
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -23,12 +24,30 @@ async def create_user(db: AsyncSession, user: User) -> User:
 async def add_refresh_token_to_user(
     db: AsyncSession, user: User, refresh_token: str
 ) -> None:
-    user.refresh_token = refresh_token
-    db.add(user)
+    refresh_token = RefreshToken(
+        user_id=user.id,
+        token=refresh_token,
+    )
+    db.add(refresh_token)
     await db.commit()
-
 
 async def list_usernames(db: AsyncSession) -> list[str]:
     result = await db.execute(select(User.username))
     usernames = result.scalars().all()
     return usernames
+
+async def enable_totp_for_user(db: AsyncSession, user: User) -> None:
+    user.is_2fa_enabled = True
+    await db.commit()
+    await db.refresh(user)
+
+async def disable_totp_for_user(db: AsyncSession, user: User) -> None:
+    user.totp_secret_encrypted = None
+    user.is_2fa_enabled = False
+    await db.commit()
+    await db.refresh(user)
+
+async def set_totp_secret(db: AsyncSession, user: User, totp_secret_encrypted: str) -> None:
+    user.totp_secret_encrypted = totp_secret_encrypted
+    await db.commit()
+    await db.refresh(user)

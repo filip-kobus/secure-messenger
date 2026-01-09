@@ -4,6 +4,7 @@ import os
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
+TOTP_ENCRYPTION_KEY = os.getenv("TOTP_ENCRYPTION_KEY")
 DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 IS_DEBUG_ENABLED = True
 
