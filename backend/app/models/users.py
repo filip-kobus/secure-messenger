@@ -10,7 +10,7 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     password_hash = Column(String)
-    totp_secret = Column(String, nullable=True)
+    totp_secret_encrypted = Column(String, nullable=True)
     is_2fa_enabled = Column(Boolean, default=False)
 
     refresh_tokens = relationship("RefreshToken", back_populates="user")
