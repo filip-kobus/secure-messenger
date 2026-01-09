@@ -18,15 +18,7 @@ app.add_exception_handler(SQLAlchemyError, ExceptionHandlers.sqlalchemy_exceptio
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(users.router, dependencies=[Depends(verify_access_token)])
-app.include_router(items.router, dependencies=[Depends(verify_access_token)])
 app.include_router(auth.router)
-app.include_router(
-    admin.router,
-    prefix="/admin",
-    tags=["admin"],
-    dependencies=[Depends(get_token_header)],
-    responses={418: {"description": "I'm a teapot"}},
-)
 
 
 @app.get("/")
