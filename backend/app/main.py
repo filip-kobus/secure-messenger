@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.dependencies import get_token_header, verify_access_token
+from app.dependencies import verify_access_token
 from app.routers import users, auth, totp
 from app.exceptions import ExceptionHandlers
 

@@ -1,6 +1,5 @@
-from typing import Annotated
 
-from fastapi import Header, HTTPException, Depends, status
+from fastapi import HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.app.models.user import User
