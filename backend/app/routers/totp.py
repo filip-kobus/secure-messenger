@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from backend.app.models.user import User
+from app.models.user import User
 from app.utils.totp_manager import generate_totp_secret, generate_qr_code, decrypt_totp_secret, encrypt_totp_secret, verify_totp_code
 from app.utils.rate_limiter import limiter
 from app.config import RateLimitConfig
