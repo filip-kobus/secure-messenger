@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Header, HTTPException, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.models.users import User
+from backend.app.models.user import User
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 

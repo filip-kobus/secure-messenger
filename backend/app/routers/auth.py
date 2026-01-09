@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from app.schemas.auth import LoginRequest, RegisterRequest
-from app.models.users import User
+from backend.app.models.user import User
 from app.crud.users import get_user_by_email, create_user
 from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token
 from app.utils.password_hasher import verify_password, hash_password

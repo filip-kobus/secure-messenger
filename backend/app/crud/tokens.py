@@ -1,4 +1,4 @@
-from app.models.tokens import RefreshToken
+from app.models.refreshtoken import RefreshToken
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, update
 from datetime import datetime, timezone

@@ -1,5 +1,5 @@
-from app.models.users import User
-from app.models.tokens import RefreshToken
+from app.models.user import User
+from app.models.refreshtoken import RefreshToken
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
