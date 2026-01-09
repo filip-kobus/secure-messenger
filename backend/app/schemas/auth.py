@@ -42,6 +42,9 @@ class RegisterRequest(BaseModel):
         ):
             raise ValueError("Password must contain at least one special character")
         return v
+    
+    public_key: str = Field(description="RSA public key in PEM format")
+    encrypted_private_key: str = Field(description="RSA private key encrypted with user password")
 
 
 class TwoFactorVerifyRequest(BaseModel):
