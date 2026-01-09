@@ -17,7 +17,7 @@ app.add_exception_handler(SQLAlchemyError, ExceptionHandlers.sqlalchemy_exceptio
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(users.router, dependencies=[Depends(verify_access_token)])
-# Not all routes in totp require token verification so no global dependency here
+# Totp has inline dependency on get_current_user
 app.include_router(totp.router)
 app.include_router(auth.router)
 
