@@ -9,7 +9,6 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.utils.rate_limiter import limiter
 
-from app.models import user, message, attachment, refreshtoken
 
 app = FastAPI()
 

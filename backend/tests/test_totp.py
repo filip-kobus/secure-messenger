@@ -16,7 +16,6 @@ async def test_initialize_totp(client: AsyncClient, auth_headers):
 async def test_enable_totp_with_valid_code(client: AsyncClient, auth_headers, test_user, db_session):
     """Test włączenia 2FA z poprawnym kodem."""
     import pyotp
-    from app.utils.totp_manager import decrypt_totp_secret
     
     # 1. Inicjalizuj TOTP
     init_response = await client.post("/totp/initialize", headers=auth_headers)

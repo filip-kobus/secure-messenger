@@ -1,4 +1,3 @@
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -12,6 +11,15 @@ from app.utils.password_hasher import hash_password
 
 # Baza testowa w pamięci
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+@pytest_asyncio.fixture(autouse=True)
+async def cleanup():
+    """Automatyczne czyszczenie przed i po każdym teście."""
+    app.dependency_overrides.clear()
+    app.state.limiter._storage.storage.clear()
+    yield
+    app.dependency_overrides.clear()
+    app.state.limiter._storage.storage.clear()
 
 @pytest_asyncio.fixture
 async def db_session():
@@ -43,15 +51,18 @@ async def client(db_session: AsyncSession):
     """FastAPI test client z nadpisaną bazą danych."""
     from httpx import ASGITransport
     
+    app.dependency_overrides.clear()
+    
     async def override_get_db():
         yield db_session
     
     app.dependency_overrides[get_db] = override_get_db
     
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
-        yield ac
-    
-    app.dependency_overrides.clear()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            yield ac
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest_asyncio.fixture
