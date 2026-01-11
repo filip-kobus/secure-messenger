@@ -5,7 +5,7 @@ from httpx import AsyncClient
 async def test_send_message(client: AsyncClient, auth_headers, test_user, db_session):
     """Test wysłania wiadomości."""
     # Utwórz drugiego użytkownika (odbiorca)
-    from app.models.users import User
+    from app.models.user import User
     from app.utils.password_hasher import hash_password
     
     receiver = User(
@@ -34,8 +34,8 @@ async def test_send_message(client: AsyncClient, auth_headers, test_user, db_ses
 async def test_get_inbox(client: AsyncClient, auth_headers, test_user, db_session):
     """Test pobierania skrzynki odbiorczej."""
     # Utwórz nadawcę i wiadomość
-    from app.models.users import User
-    from app.models.messages import Message
+    from app.models.user import User
+    from app.models.message import Message
     from app.utils.password_hasher import hash_password
     
     sender = User(
@@ -68,8 +68,8 @@ async def test_get_inbox(client: AsyncClient, auth_headers, test_user, db_sessio
 @pytest.mark.asyncio
 async def test_mark_message_as_read(client: AsyncClient, auth_headers, test_user, db_session):
     """Test oznaczania wiadomości jako przeczytanej."""
-    from app.models.users import User
-    from app.models.messages import Message
+    from app.models.user import User
+    from app.models.message import Message
     from app.utils.password_hasher import hash_password
     
     sender = User(

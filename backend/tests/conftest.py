@@ -41,12 +41,14 @@ async def db_session():
 @pytest_asyncio.fixture
 async def client(db_session: AsyncSession):
     """FastAPI test client z nadpisaną bazą danych."""
+    from httpx import ASGITransport
+    
     async def override_get_db():
         yield db_session
     
     app.dependency_overrides[get_db] = override_get_db
     
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
     
     app.dependency_overrides.clear()
@@ -72,9 +74,10 @@ async def test_user(db_session: AsyncSession):
 @pytest_asyncio.fixture
 async def test_user_with_2fa(db_session: AsyncSession):
     """Tworzy użytkownika z włączonym 2FA."""
-    from app.utils.totp_manager import generate_encrypted_totp_secret
+    from app.utils.totp_manager import generate_totp_secret, encrypt_totp_secret
     
-    plain_secret, encrypted_secret = generate_encrypted_totp_secret()
+    plain_secret = generate_totp_secret()
+    encrypted_secret = encrypt_totp_secret(plain_secret)
     
     user = User(
         username="user2fa",
@@ -94,7 +97,7 @@ async def test_user_with_2fa(db_session: AsyncSession):
 @pytest_asyncio.fixture
 async def auth_headers(client: AsyncClient, test_user: User):
     """Zwraca nagłówki z tokenem JWT."""
-    response = await client.post("/auth/login/", json={
+    response = await client.post("/auth/login", json={
         "email": test_user.email,
         "password": "TestPass123!"
     })

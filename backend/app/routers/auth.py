@@ -13,7 +13,7 @@ from app.utils.tokens_manager import create_access_token, create_refresh_token, 
 router = APIRouter()
 
 
-@router.post("/login/", tags=["auth"])
+@router.post("/auth/login", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_LOGIN)
 async def login(request: Request, login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
     user = await get_user_by_email(db, login_data.email)
@@ -31,7 +31,7 @@ async def login(request: Request, login_data: LoginRequest, db: AsyncSession = D
         )
     if user.is_2fa_enabled:
         totp_secret = decrypt_totp_secret(user.totp_secret_encrypted)
-        if not verify_totp_code(totp_secret, str(totp_code)):
+        if not verify_totp_code(totp_secret, totp_code):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid TOTP code"
@@ -53,28 +53,38 @@ async def login(request: Request, login_data: LoginRequest, db: AsyncSession = D
     }
 
 
-@router.post("/register/", tags=["auth"])
+@router.post("/auth/register", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_REGISTER)
 async def register(request: Request, register_data: RegisterRequest, db: AsyncSession = Depends(get_db)):
-    existing_user = await get_user_by_email(db, register_data.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Email already registered"
+    try:
+        existing_user = await get_user_by_email(db, register_data.email)
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered"
+            )
+        
+        hashed_password = hash_password(register_data.password)
+        user = User(
+            username=register_data.username,
+            email=register_data.email,
+            password_hash=hashed_password,
+            public_key=register_data.public_key,
+            encrypted_private_key=register_data.encrypted_private_key
         )
-    
-    hashed_password = hash_password(register_data.password)
-    user = User(
-        username=register_data.username,
-        email=register_data.email,
-        password_hash=hashed_password,
-    )
 
-    await create_user(db, user)
-    return {"message": "User registered successfully"}
+        await create_user(db, user)
+        return {"message": "User registered successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
+        )
 
 
-@router.post("/refresh-token/", tags=["auth"])
+@router.post("/refresh-token", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_REFRESH)
 async def refresh_token_endpoint(request: Request, refresh_token: str, db: AsyncSession = Depends(get_db)):
     db_token = await check_refresh_token(db, refresh_token)
@@ -97,7 +107,7 @@ async def refresh_token_endpoint(request: Request, refresh_token: str, db: Async
         "token_type": "bearer",
     }
 
-@router.post("/logout/", tags=["auth"])
+@router.post("/logout", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_REFRESH)
 async def logout(request: Request, refresh_token: str, db: AsyncSession = Depends(get_db)):
     db_token = await check_refresh_token(db, refresh_token)

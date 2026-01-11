@@ -9,7 +9,7 @@ class LoginRequest(BaseModel):
     password: str = Field(
         min_length=1, max_length=UserCredentialsConfig.PASSWORD_MAX_LENGTH
     )
-    totp_code: Optional[int] = Field(
+    totp_code: Optional[str] = Field(
         None,
         min_length=6,
         max_length=6,
