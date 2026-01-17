@@ -14,6 +14,7 @@ class Message(Base):
     encrypted_content = Column(Text, nullable=False)
     
     encrypted_symmetric_key = Column(Text, nullable=False)
+    encrypted_symmetric_key_sender = Column(Text, nullable=True)
     
     signature = Column(Text, nullable=False)
     

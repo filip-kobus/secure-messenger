@@ -5,6 +5,7 @@ class SendMessageRequest(BaseModel):
     receiver_id: int
     encrypted_content: str
     encrypted_symmetric_key: str
+    encrypted_symmetric_key_sender: str | None = None
     signature: str
     attachments: list["AttachmentData"] | None = None
 
@@ -18,8 +19,11 @@ class MessageResponse(BaseModel):
     id: int
     sender_id: int
     sender_username: str
+    recipient_id: int | None = None
+    recipient_username: str | None = None
     encrypted_content: str
     encrypted_symmetric_key: str
+    encrypted_symmetric_key_sender: str | None = None
     signature: str
     created_at: datetime
     is_read: bool

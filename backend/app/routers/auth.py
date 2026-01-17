@@ -9,6 +9,7 @@ from app.config import RateLimitConfig
 from app.db import AsyncSession, get_db
 from app.utils.totp_manager import verify_totp_code, decrypt_totp_secret
 from app.utils.tokens_manager import create_access_token, create_refresh_token, refresh_access_token
+from app.dependencies import get_current_user
 
 router = APIRouter()
 
@@ -50,6 +51,7 @@ async def login(request: Request, login_data: LoginRequest, db: AsyncSession = D
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
+        "encrypted_private_key": user.encrypted_private_key
     }
 
 
@@ -114,3 +116,13 @@ async def logout(request: Request, refresh_token: str, db: AsyncSession = Depend
     if db_token:
         await revoke_refresh_token(db, refresh_token)
     return {"message": "Logged out successfully"}
+
+
+@router.get("/auth/me", tags=["auth"])
+@limiter.limit(RateLimitConfig.DEFAULT_LIMIT)
+async def get_me(request: Request, current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email
+    }

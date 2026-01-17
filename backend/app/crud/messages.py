@@ -12,6 +12,7 @@ async def create_message(db: AsyncSession, message_in: SendMessageRequest, sende
         receiver_id=message_in.receiver_id,
         encrypted_content=message_in.encrypted_content,
         encrypted_symmetric_key=message_in.encrypted_symmetric_key,
+        encrypted_symmetric_key_sender=message_in.encrypted_symmetric_key_sender,
         signature=message_in.signature
     )
     db.add(db_message)
@@ -32,6 +33,20 @@ async def get_inbox_messages(db: AsyncSession, receiver_id: int):
     # result is rows of (Message, username)
     return result.all()
 
+
+async def get_sent_messages(db: AsyncSession, sender_id: int):
+    # Join with User to get receiver info for the response schema
+    query = (
+        select(Message, User.username)
+        .join(User, Message.receiver_id == User.id)
+        .where(Message.sender_id == sender_id)
+        .options(selectinload(Message.attachments))
+        .order_by(Message.created_at.desc())
+    )
+    result = await db.execute(query)
+    return result.all()
+
+
 async def get_message_by_id(db: AsyncSession, message_id: int) -> Message | None:
     query = select(Message).where(Message.id == message_id)
     result = await db.execute(query)
@@ -45,3 +60,15 @@ async def mark_message_read(db: AsyncSession, message_id: int):
     )
     await db.execute(query)
     await db.commit()
+
+
+async def delete_message(db: AsyncSession, message_id: int):
+    query = select(Message).where(Message.id == message_id)
+    result = await db.execute(query)
+    message = result.scalar_one_or_none()
+    
+    if message:
+        await db.delete(message)
+        await db.commit()
+    
+    return message

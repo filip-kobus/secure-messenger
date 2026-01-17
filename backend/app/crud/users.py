@@ -11,6 +11,18 @@ async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
     return user
 
 
+async def get_user_by_username(db: AsyncSession, username: str) -> User | None:
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalar_one_or_none()
+    return user
+
+
+async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    return user
+
+
 async def create_user(db: AsyncSession, user: User) -> User:
     try:
         db.add(user)
@@ -35,6 +47,13 @@ async def list_usernames(db: AsyncSession) -> list[str]:
     result = await db.execute(select(User.username))
     usernames = result.scalars().all()
     return usernames
+
+
+async def list_all_users(db: AsyncSession) -> list[User]:
+    result = await db.execute(select(User))
+    users = result.scalars().all()
+    return list(users)
+
 
 async def enable_totp_for_user(db: AsyncSession, user: User) -> None:
     user.is_2fa_enabled = True
