@@ -7,6 +7,11 @@ interface TOTPInitResponse {
   qr_code: string;
 }
 
+interface TOTPStatusResponse {
+  is_2fa_enabled: boolean;
+  has_secret: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,6 +22,10 @@ export class TotpService {
 
   initializeTOTP(): Observable<TOTPInitResponse> {
     return this.http.post<TOTPInitResponse>(`${this.apiUrl}/totp/initialize`, {});
+  }
+
+  getTOTPStatus(): Observable<TOTPStatusResponse> {
+    return this.http.get<TOTPStatusResponse>(`${this.apiUrl}/totp/status`);
   }
 
   enableTOTP(totpCode: string): Observable<any> {

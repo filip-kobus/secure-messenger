@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { CryptoService } from './crypto.service';
 import { AuthService } from './auth.service';
 
@@ -52,9 +52,9 @@ export class MessageService {
     files: File[] = []
   ): Promise<any> {
     // Pobierz klucz publiczny odbiorcy
-    const recipient = await this.http.get<User>(
+    const recipient = await firstValueFrom(this.http.get<User>(
       `${this.apiUrl}/users/by-username/${recipientUsername}`
-    ).toPromise();
+    ));
 
     if (!recipient) {
       throw new Error('Recipient not found');
@@ -108,12 +108,14 @@ export class MessageService {
     }
 
     // Wyślij na serwer
-    return this.http.post(`${this.apiUrl}/messages/send`, {
+    return firstValueFrom(this.http.post(`${this.apiUrl}/messages/send`, {
       receiver_id: recipient.id,
       encrypted_content: encryptedContent,
-      encrypted_symmetric_key: encryptedSymmetricKey,      encrypted_symmetric_key_sender: encryptedSymmetricKeySender,      signature: signature,
+      encrypted_symmetric_key: encryptedSymmetricKey,
+      encrypted_symmetric_key_sender: encryptedSymmetricKeySender,
+      signature: signature,
       attachments: attachments
-    }).toPromise();
+    }));
   }
 
   getInbox(): Observable<Message[]> {
@@ -125,7 +127,24 @@ export class MessageService {
   }
 
   async decryptMessage(message: Message): Promise<string> {
-    const privateKey = await this.authService.getPrivateKey();
+    // Sprawdź czy jest klucz prywatny
+    let privateKey = await this.authService.getPrivateKey();
+    
+    // Jeśli brak klucza prywatnego, poproś o hasło
+    if (!privateKey) {
+      const password = await this.authService.promptForPassword();
+      if (!password) {
+        throw new Error('Password required to decrypt message');
+      }
+      
+      const success = await this.authService.unlockPrivateKey(password);
+      if (!success) {
+        throw new Error('Invalid password');
+      }
+      
+      privateKey = await this.authService.getPrivateKey();
+    }
+    
     if (!privateKey) {
       throw new Error('Private key not available');
     }
@@ -163,9 +182,9 @@ export class MessageService {
 
   async verifyMessageSignature(message: Message, decryptedContent: string): Promise<boolean> {
     // Pobierz klucz publiczny nadawcy
-    const sender = await this.http.get<User>(
+    const sender = await firstValueFrom(this.http.get<User>(
       `${this.apiUrl}/users/${message.sender_id}`
-    ).toPromise();
+    ));
 
     if (!sender) {
       return false;
@@ -179,7 +198,32 @@ export class MessageService {
   }
 
   async decryptAttachment(attachment: Attachment, message: Message): Promise<Blob> {
-    const privateKey = await this.authService.getPrivateKey();
+    // Pobierz zaszyfrowane dane z backendu jeśli nie są dostępne
+    if (!attachment.encrypted_data) {
+      const fullAttachment = await firstValueFrom(
+        this.http.get<Attachment>(`${this.apiUrl}/messages/attachments/${attachment.id}`)
+      );
+      attachment.encrypted_data = fullAttachment.encrypted_data;
+    }
+
+    // Sprawdź czy jest klucz prywatny
+    let privateKey = await this.authService.getPrivateKey();
+    
+    // Jeśli brak klucza prywatnego, poproś o hasło
+    if (!privateKey) {
+      const password = await this.authService.promptForPassword();
+      if (!password) {
+        throw new Error('Password required to decrypt attachment');
+      }
+      
+      const success = await this.authService.unlockPrivateKey(password);
+      if (!success) {
+        throw new Error('Invalid password');
+      }
+      
+      privateKey = await this.authService.getPrivateKey();
+    }
+    
     if (!privateKey) {
       throw new Error('Private key not available');
     }

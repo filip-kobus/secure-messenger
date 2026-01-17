@@ -2,9 +2,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from app.models.message import Message
+from app.models.attachment import Attachment
 from app.models.user import User
 from app.schemas.message import SendMessageRequest
 from datetime import datetime
+import base64
 
 async def create_message(db: AsyncSession, message_in: SendMessageRequest, sender_id: int) -> Message:
     db_message = Message(
@@ -16,6 +18,23 @@ async def create_message(db: AsyncSession, message_in: SendMessageRequest, sende
         signature=message_in.signature
     )
     db.add(db_message)
+    await db.flush()  # Flush to get message.id before creating attachments
+    
+    # Create attachments if provided
+    if message_in.attachments:
+        for attachment_data in message_in.attachments:
+            # Decode base64 encrypted_data to binary
+            encrypted_binary = base64.b64decode(attachment_data.encrypted_data)
+            
+            db_attachment = Attachment(
+                message_id=db_message.id,
+                encrypted_data=encrypted_binary,
+                filename=attachment_data.filename,
+                mime_type=attachment_data.mime_type,
+                size=attachment_data.size
+            )
+            db.add(db_attachment)
+    
     await db.commit()
     await db.refresh(db_message)
     return db_message

@@ -1,19 +1,20 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet],
+  imports: [CommonModule, RouterOutlet, FormsModule],
   template: `
     <div class="app">
-      <header *ngIf="(authService.currentUser$ | async) as user">
+      <header *ngIf="currentUser">
         <div class="header-content">
           <h2>Secure Messenger</h2>
           <div class="user-info">
-            <span>{{ user.username }}</span>
+            <span>{{ currentUser.username }}</span>
             <button (click)="logout()">Wyloguj</button>
           </div>
         </div>
@@ -82,11 +83,19 @@ import { AuthService } from './services/auth.service';
     }
   `]
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
+  currentUser: any = null;
+
   constructor(
-    public authService: AuthService,
+    private authService: AuthService,
     private router: Router
   ) {}
+
+  async ngOnInit() {
+    // Sprawdź auth przy starcie
+    await this.authService.checkAuth();
+    this.currentUser = this.authService.getCurrentUser();
+  }
 
   logout() {
     this.authService.logout().subscribe({

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
+import base64
 
 from app.db import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
+from app.models.attachment import Attachment
 from app.schemas.message import MessageResponse, SendMessageRequest
 from app.crud.messages import create_message, get_inbox_messages, get_sent_messages, get_message_by_id, mark_message_read, delete_message
 from sqlalchemy import select
@@ -38,6 +40,17 @@ async def get_inbox(
     # rows contains (Message, sender_username)
     response = []
     for message, sender_username in rows:
+        # Map attachments to response schema
+        attachment_responses = []
+        if message.attachments:
+            for att in message.attachments:
+                attachment_responses.append({
+                    "id": att.id,
+                    "filename": att.filename,
+                    "mime_type": att.mime_type,
+                    "size": att.size
+                })
+        
         response.append(MessageResponse(
             id=message.id,
             sender_id=message.sender_id,
@@ -48,14 +61,8 @@ async def get_inbox(
             signature=message.signature,
             created_at=message.created_at,
             is_read=message.is_read,
-            attachments=[] # Attachments handling deferred or need mapping
+            attachments=attachment_responses
         ))
-        
-        # Note: attachments simple list if loaded
-        if message.attachments:
-             # Basic mapping if needed, schema expects AttachmentResponse
-             # Assuming Attachment model has id, filename.
-             pass 
 
     return response
 
@@ -69,6 +76,17 @@ async def get_sent(
     # rows contains (Message, receiver_username)
     response = []
     for message, receiver_username in rows:
+        # Map attachments to response schema
+        attachment_responses = []
+        if message.attachments:
+            for att in message.attachments:
+                attachment_responses.append({
+                    "id": att.id,
+                    "filename": att.filename,
+                    "mime_type": att.mime_type,
+                    "size": att.size
+                })
+        
         response.append(MessageResponse(
             id=message.id,
             sender_id=message.sender_id,
@@ -81,7 +99,7 @@ async def get_sent(
             signature=message.signature,
             created_at=message.created_at,
             is_read=message.is_read,
-            attachments=[]
+            attachments=attachment_responses
         ))
 
     return response
@@ -119,3 +137,38 @@ async def delete_message_endpoint(
     
     await delete_message(db, message_id, current_user.id)
     return {"status": "success", "message": "Message deleted"}
+
+
+@router.get("/attachments/{attachment_id}")
+async def get_attachment(
+    attachment_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Pobiera zaszyfrowaną zawartość załącznika"""
+    query = select(Attachment).where(Attachment.id == attachment_id)
+    result = await db.execute(query)
+    attachment = result.scalar_one_or_none()
+    
+    if not attachment:
+        raise HTTPException(status_code=404, detail="Attachment not found")
+    
+    # Sprawdź uprawnienia - pobierz wiadomość do której należy załącznik
+    message = await get_message_by_id(db, attachment.message_id)
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    # Użytkownik musi być nadawcą lub odbiorcą wiadomości
+    if message.sender_id != current_user.id and message.receiver_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Zwróć zaszyfrowaną zawartość jako base64
+    encrypted_base64 = base64.b64encode(attachment.encrypted_data).decode('utf-8')
+    
+    return {
+        "id": attachment.id,
+        "filename": attachment.filename,
+        "mime_type": attachment.mime_type,
+        "size": attachment.size,
+        "encrypted_data": encrypted_base64
+    }

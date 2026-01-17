@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { MessageService, Message, Attachment } from '../../services/message.service';
 
 @Component({
@@ -59,9 +60,12 @@ import { MessageService, Message, Attachment } from '../../services/message.serv
               <div class="attachment-info">
                 <strong>{{ attachment.filename }}</strong>
                 <span class="file-size">{{ formatFileSize(attachment.size) }}</span>
+                <span class="mime-type">{{ attachment.mime_type }}</span>
               </div>
-              <button (click)="downloadAttachment(attachment)">
-                Pobierz
+              <button 
+                (click)="downloadAttachment(attachment)"
+                [disabled]="downloadingAttachmentId === attachment.id">
+                {{ downloadingAttachmentId === attachment.id ? 'Pobieranie...' : 'Pobierz' }}
               </button>
             </div>
           </div>
@@ -211,6 +215,12 @@ import { MessageService, Message, Attachment } from '../../services/message.serv
       color: #666;
     }
 
+    .mime-type {
+      font-size: 11px;
+      color: #999;
+      font-style: italic;
+    }
+
     .actions {
       display: flex;
       gap: 10px;
@@ -231,6 +241,7 @@ export class ViewMessageComponent implements OnInit {
   markingAsRead = false;
   deleting = false;
   isInbox = false;
+  downloadingAttachmentId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -248,7 +259,7 @@ export class ViewMessageComponent implements OnInit {
     
     try {
       // Spróbuj załadować z inbox
-      const inboxMessages = await this.messageService.getInbox().toPromise();
+      const inboxMessages = await firstValueFrom(this.messageService.getInbox());
       let message = inboxMessages?.find(m => m.id === id);
       
       if (message) {
@@ -258,7 +269,7 @@ export class ViewMessageComponent implements OnInit {
       }
       
       // Jeśli nie ma w inbox, spróbuj sent
-      const sentMessages = await this.messageService.getSent().toPromise();
+      const sentMessages = await firstValueFrom(this.messageService.getSent());
       message = sentMessages?.find(m => m.id === id);
       
       if (message) {
@@ -298,6 +309,9 @@ export class ViewMessageComponent implements OnInit {
   async downloadAttachment(attachment: Attachment) {
     if (!this.message) return;
 
+    this.downloadingAttachmentId = attachment.id;
+    this.error = '';
+
     try {
       const blob = await this.messageService.decryptAttachment(attachment, this.message);
       const url = window.URL.createObjectURL(blob);
@@ -308,8 +322,11 @@ export class ViewMessageComponent implements OnInit {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (err) {
-      this.error = 'Błąd pobierania załącznika';
+    } catch (err: any) {
+      this.error = err.message || 'Błąd pobierania załącznika';
+      console.error('Download error:', err);
+    } finally {
+      this.downloadingAttachmentId = null;
     }
   }
 

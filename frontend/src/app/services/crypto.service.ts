@@ -270,8 +270,14 @@ export class CryptoService {
     combined.set(iv, 0);
     combined.set(new Uint8Array(encrypted), iv.length);
 
+    // Konwersja na base64 bez spread operator (unika stack overflow dla dużych plików)
+    let binary = '';
+    for (let i = 0; i < combined.length; i++) {
+      binary += String.fromCharCode(combined[i]);
+    }
+
     return {
-      encrypted: btoa(String.fromCharCode(...combined))
+      encrypted: btoa(binary)
     };
   }
 

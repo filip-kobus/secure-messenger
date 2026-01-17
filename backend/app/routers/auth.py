@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from app.schemas.auth import LoginRequest, RegisterRequest
 from app.models.user import User
 from app.crud.users import get_user_by_email, create_user
-from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token
+from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token, revoke_all_user_tokens
 from app.utils.password_hasher import verify_password, hash_password
 from app.utils.rate_limiter import limiter
 from app.config import RateLimitConfig
@@ -45,6 +45,8 @@ async def login(request: Request, login_data: LoginRequest, db: AsyncSession = D
     access_token = create_access_token({"sub": str(user.id)})
     refresh_token = create_refresh_token({"sub": str(user.id)})
     
+    # Unieważnij wszystkie stare tokeny przed utworzeniem nowego
+    await revoke_all_user_tokens(db, user.id)
     await add_refresh_token(db, user.id, refresh_token)
     
     return {
@@ -86,19 +88,26 @@ async def register(request: Request, register_data: RegisterRequest, db: AsyncSe
         )
 
 
-@router.post("/refresh-token", tags=["auth"])
+@router.post("/auth/refresh-token", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_REFRESH)
 async def refresh_token_endpoint(request: Request, refresh_token: str, db: AsyncSession = Depends(get_db)):
+    print(f"[DEBUG] Refresh token request: {refresh_token[:50]}...")
+    
     db_token = await check_refresh_token(db, refresh_token)
+    print(f"[DEBUG] DB token found: {db_token is not None}")
+    
     if not db_token or db_token.revoked:
+        print(f"[DEBUG] Token invalid or revoked. DB token exists: {db_token is not None}, Revoked: {db_token.revoked if db_token else 'N/A'}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or revoked refresh token"
         )
     
     new_access_token = refresh_access_token(refresh_token)
+    print(f"[DEBUG] New access token created: {new_access_token is not None}")
     
     if not new_access_token:
+        print("[DEBUG] Failed to create new access token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token"
@@ -109,12 +118,15 @@ async def refresh_token_endpoint(request: Request, refresh_token: str, db: Async
         "token_type": "bearer",
     }
 
-@router.post("/logout", tags=["auth"])
+@router.post("/auth/logout", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_REFRESH)
-async def logout(request: Request, refresh_token: str, db: AsyncSession = Depends(get_db)):
-    db_token = await check_refresh_token(db, refresh_token)
-    if db_token:
-        await revoke_refresh_token(db, refresh_token)
+async def logout(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Wyloguj użytkownika - unieważnij wszystkie jego tokeny"""
+    await revoke_all_user_tokens(db, current_user.id)
     return {"message": "Logged out successfully"}
 
 
@@ -125,4 +137,28 @@ async def get_me(request: Request, current_user: User = Depends(get_current_user
         "id": current_user.id,
         "username": current_user.username,
         "email": current_user.email
+    }
+
+
+@router.post("/auth/unlock-private-key", tags=["auth"])
+@limiter.limit(RateLimitConfig.AUTH_ATTEMPTS)
+async def unlock_private_key(
+    request: Request,
+    password: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Endpoint do ponownego pobrania encrypted_private_key.
+    Wymaga poprawnego hasła i ważnego JWT tokena.
+    Używany gdy użytkownik ma refresh_token ale stracił privateKey (np. po restarcie przeglądarki).
+    """
+    # Weryfikuj hasło
+    if not verify_password(password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid password"
+        )
+    
+    return {
+        "encrypted_private_key": current_user.encrypted_private_key
     }

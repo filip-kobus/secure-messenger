@@ -10,7 +10,8 @@ IS_DEBUG_ENABLED = True
 
 
 class RateLimitConfig:
-    DEFAULT_LIMIT = "30/minute"
+    AUTH_ATTEMPTS = "10/hour"
+    DEFAULT_LIMIT = "100/minute"
     AUTH_LOGIN = "5/minute"
     AUTH_REGISTER = "5/minute"
     AUTH_REFRESH = "10/minute"

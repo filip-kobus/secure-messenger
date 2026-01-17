@@ -1,9 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TotpService } from '../../services/totp.service';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-totp-setup',
@@ -21,7 +20,9 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
       <div *ngIf="initialized && !enabled">
         <h2>Skanuj kod QR w aplikacji authenticator:</h2>
         
-        <div class="qr-code" [innerHTML]="qrCode"></div>
+        <div class="qr-code">
+          <img [src]="qrCode" alt="QR Code" style="max-width: 300px;">
+        </div>
         
         <p>Lub wprowadź ręcznie kod: <strong>{{ secret }}</strong></p>
 
@@ -179,11 +180,11 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
     }
   `]
 })
-export class TotpSetupComponent {
+export class TotpSetupComponent implements OnInit {
   initialized = false;
   enabled = false;
   secret = '';
-  qrCode: SafeHtml = '';
+  qrCode: string = '';
   totpCode = '';
   disableCode = '';
   error = '';
@@ -191,9 +192,27 @@ export class TotpSetupComponent {
 
   constructor(
     private totpService: TotpService,
-    private router: Router,
-    private sanitizer: DomSanitizer
+    private router: Router
   ) {}
+
+  ngOnInit() {
+    this.checkTOTPStatus();
+  }
+
+  checkTOTPStatus() {
+    this.loading = true;
+    this.totpService.getTOTPStatus().subscribe({
+      next: (response) => {
+        this.enabled = response.is_2fa_enabled;
+        this.initialized = response.has_secret;
+        this.loading = false;
+      },
+      error: (err) => {
+        console.error('Error checking TOTP status:', err);
+        this.loading = false;
+      }
+    });
+  }
 
   initializeTOTP() {
     this.loading = true;
@@ -202,7 +221,7 @@ export class TotpSetupComponent {
     this.totpService.initializeTOTP().subscribe({
       next: (response) => {
         this.secret = response.secret;
-        this.qrCode = this.sanitizer.bypassSecurityTrustHtml(response.qr_code);
+        this.qrCode = response.qr_code;
         this.initialized = true;
         this.loading = false;
       },
@@ -238,6 +257,8 @@ export class TotpSetupComponent {
       next: () => {
         this.enabled = false;
         this.initialized = false;
+        this.secret = '';
+        this.qrCode = '';
         this.disableCode = '';
         this.loading = false;
       },

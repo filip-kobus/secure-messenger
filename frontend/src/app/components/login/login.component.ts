@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -124,7 +124,7 @@ import { AuthService } from '../../services/auth.service';
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   email = '';
   password = '';
   totpCode = '';
@@ -136,6 +136,13 @@ export class LoginComponent {
     private authService: AuthService,
     private router: Router
   ) {}
+
+  async ngOnInit() {
+    const isAuthenticated = await this.authService.checkAuth();
+    if (isAuthenticated) {
+      this.router.navigate(['/messages']);
+    }
+  }
 
   async onSubmit() {
     this.error = '';

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -148,7 +148,7 @@ import { AuthService } from '../../services/auth.service';
     }
   `]
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   username = '';
   email = '';
   password = '';
@@ -161,6 +161,13 @@ export class RegisterComponent {
     private authService: AuthService,
     private router: Router
   ) {}
+
+  ngOnInit() {
+    // Jeśli użytkownik jest już zalogowany, przekieruj do wiadomości
+    if (this.authService.isAuthenticated()) {
+      this.router.navigate(['/messages']);
+    }
+  }
 
   async onSubmit() {
     this.error = '';
