@@ -1,0 +1,56 @@
+<div class="container">
+  <div class="header">
+    <h1>Wiadomości</h1>
+    <div class="actions">
+      <button (click)="navigateToSend()">Napisz wiadomość</button>
+      <button (click)="navigateToTotp()">Ustawienia 2FA</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button 
+      [class.active]="activeTab === 'inbox'"
+      (click)="activeTab = 'inbox'; loadMessages()">
+      Odebrane ({{ inbox.length }})
+    </button>
+    <button 
+      [class.active]="activeTab === 'sent'"
+      (click)="activeTab = 'sent'; loadMessages()">
+      Wysłane ({{ sent.length }})
+    </button>
+  </div>
+
+  <div class="error" *ngIf="error">{{ error }}</div>
+
+  <div class="messages" *ngIf="!loading">
+    <div 
+      *ngFor="let message of activeTab === 'inbox' ? inbox : sent"
+      class="message"
+      [class.unread]="!message.is_read && activeTab === 'inbox'"
+      (click)="viewMessage(message)">
+      <div class="message-header">
+        <strong>
+          {{ activeTab === 'inbox' ? 'Od: ' + message.sender_username : 'Do: ' + message.recipient_username }}
+        </strong>
+        <span class="date">{{ formatDate(message.created_at) }}</span>
+      </div>
+      <div class="message-preview">
+        <span *ngIf="activeTab === 'inbox'">
+          {{ message.is_read ? '✓' : '✉' }} Zaszyfrowana wiadomość
+        </span>
+        <span *ngIf="activeTab === 'sent'">
+          {{ message.is_read ? '✓ Odczytana' : '✉ Nieodczytana' }}
+        </span>
+        <span *ngIf="message.attachments && message.attachments.length > 0">
+          ({{ message.attachments.length }} załącznik<span *ngIf="message.attachments.length > 1">i/ów</span>)
+        </span>
+      </div>
+    </div>
+
+    <div *ngIf="(activeTab === 'inbox' ? inbox : sent).length === 0" class="empty">
+      Brak wiadomości
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">Ładowanie...</div>
+</div>

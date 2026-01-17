@@ -1,0 +1,70 @@
+<div class="container">
+  <h1>Ustawienia 2FA (TOTP)</h1>
+
+  <div *ngIf="!initialized && !loading">
+    <p>Włącz dwuetapową weryfikację dla zwiększenia bezpieczeństwa konta.</p>
+    <button (click)="initializeTOTP()">Włącz 2FA</button>
+  </div>
+
+  <div *ngIf="initialized && !enabled">
+    <h2>Skanuj kod QR w aplikacji authenticator:</h2>
+    
+    <div class="qr-code">
+      <img [src]="qrCode" alt="QR Code" style="max-width: 300px;">
+    </div>
+    
+    <p>Lub wprowadź ręcznie kod: <strong>{{ secret }}</strong></p>
+
+    <form (ngSubmit)="enableTOTP()">
+      <div class="form-group">
+        <label for="totpCode">Wprowadź 6-cyfrowy kod z aplikacji:</label>
+        <input 
+          type="text" 
+          id="totpCode" 
+          name="totpCode"
+          [(ngModel)]="totpCode" 
+          required
+          maxlength="6"
+          placeholder="123456">
+      </div>
+
+      <div class="error" *ngIf="error">{{ error }}</div>
+
+      <button type="submit" [disabled]="loading || totpCode.length !== 6">
+        {{ loading ? 'Weryfikacja...' : 'Potwierdź i włącz 2FA' }}
+      </button>
+    </form>
+  </div>
+
+  <div *ngIf="enabled">
+    <div class="success">
+      <p>✓ Dwuetapowa weryfikacja jest włączona</p>
+    </div>
+
+    <form (ngSubmit)="disableTOTP()">
+      <div class="form-group">
+        <label for="disableCode">Aby wyłączyć, wprowadź kod:</label>
+        <input 
+          type="text" 
+          id="disableCode" 
+          name="disableCode"
+          [(ngModel)]="disableCode" 
+          required
+          maxlength="6"
+          placeholder="123456">
+      </div>
+
+      <div class="error" *ngIf="error">{{ error }}</div>
+
+      <button type="submit" [disabled]="loading || disableCode.length !== 6" class="danger">
+        {{ loading ? 'Wyłączanie...' : 'Wyłącz 2FA' }}
+      </button>
+    </form>
+  </div>
+
+  <div *ngIf="loading && !initialized" class="loading">
+    Ładowanie...
+  </div>
+
+  <button (click)="goBack()" class="back-btn">Powrót do wiadomości</button>
+</div>

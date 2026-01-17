@@ -1,0 +1,63 @@
+<div class="container">
+  <h1>Wyślij wiadomość</h1>
+
+  <form (ngSubmit)="onSubmit()" #sendForm="ngForm">
+    <div class="form-group">
+      <label for="recipient">Odbiorca:</label>
+      <select 
+        id="recipient" 
+        name="recipient"
+        [(ngModel)]="recipientUsername" 
+        required>
+        <option value="">Wybierz użytkownika</option>
+        <option *ngFor="let user of users" [value]="user.username">
+          {{ user.username }} ({{ user.email }})
+        </option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="content">Treść wiadomości:</label>
+      <textarea 
+        id="content" 
+        name="content"
+        [(ngModel)]="content" 
+        required
+        rows="8"
+        placeholder="Wpisz treść wiadomości..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="files">Załączniki (max 10 plików, max 10MB każdy):</label>
+      <input 
+        type="file" 
+        id="files"
+        (change)="onFileChange($event)"
+        multiple
+        accept="*/*">
+      <div class="file-list" *ngIf="selectedFiles.length > 0">
+        <div *ngFor="let file of selectedFiles; let i = index" class="file-item">
+          {{ file.name }} ({{ formatFileSize(file.size) }})
+          <button type="button" (click)="removeFile(i)">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="error" *ngIf="error">{{ error }}</div>
+    <div class="success" *ngIf="success">{{ success }}</div>
+
+    <div class="button-group">
+      <button 
+        type="submit" 
+        [disabled]="!sendForm.valid || loading">
+        {{ loading ? 'Wysyłanie...' : 'Wyślij' }}
+      </button>
+      <button 
+        type="button" 
+        (click)="cancel()"
+        [disabled]="loading">
+        Anuluj
+      </button>
+    </div>
+  </form>
+</div>

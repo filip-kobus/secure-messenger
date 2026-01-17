@@ -1,0 +1,78 @@
+<div class="container">
+  <div class="header">
+    <h1>Wiadomość</h1>
+    <button (click)="goBack()">← Powrót</button>
+  </div>
+
+  <div *ngIf="loading" class="loading">Ładowanie...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div *ngIf="message && !loading" class="message-details">
+    <div class="message-header">
+      <div class="info-row">
+        <strong>Od:</strong> {{ message.sender_username }}
+      </div>
+      <div class="info-row">
+        <strong>Do:</strong> {{ message.recipient_username }}
+      </div>
+      <div class="info-row">
+        <strong>Data:</strong> {{ formatDate(message.created_at) }}
+      </div>
+      <div class="info-row">
+        <strong>Podpis:</strong> 
+        <span [class]="signatureVerified ? 'verified' : 'not-verified'">
+          {{ signatureVerified ? '✓ Zweryfikowany' : '✗ Niezweryfikowany' }}
+        </span>
+      </div>
+      <div class="info-row" *ngIf="!isInbox">
+        <strong>Status:</strong> 
+        <span [class]="message.is_read ? 'read-status' : 'unread-status'">
+          {{ message.is_read ? '✓ Odczytana' : '✗ Nieodczytana' }}
+        </span>
+      </div>
+    </div>
+
+    <div class="message-content">
+      <h3>Treść:</h3>
+      <div class="content-box" *ngIf="decryptedContent">
+        {{ decryptedContent }}
+      </div>
+      <div class="content-box" *ngIf="!decryptedContent">
+        <em>Deszyfrowanie...</em>
+      </div>
+    </div>
+
+    <div class="attachments" *ngIf="message.attachments && message.attachments.length > 0">
+      <h3>Załączniki ({{ message.attachments.length }}):</h3>
+      <div class="attachment-list">
+        <div *ngFor="let attachment of message.attachments" class="attachment-item">
+          <div class="attachment-info">
+            <strong>{{ attachment.filename }}</strong>
+            <span class="file-size">{{ formatFileSize(attachment.size) }}</span>
+            <span class="mime-type">{{ attachment.mime_type }}</span>
+          </div>
+          <button 
+            (click)="downloadAttachment(attachment)"
+            [disabled]="downloadingAttachmentId === attachment.id">
+            {{ downloadingAttachmentId === attachment.id ? 'Pobieranie...' : 'Pobierz' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button 
+        *ngIf="isInbox && !message.is_read" 
+        (click)="markAsRead()"
+        [disabled]="markingAsRead">
+        {{ markingAsRead ? 'Oznaczanie...' : 'Oznacz jako przeczytane' }}
+      </button>
+      <button 
+        (click)="deleteMessage()"
+        [disabled]="deleting"
+        class="delete-btn">
+        {{ deleting ? 'Usuwanie...' : 'Usuń wiadomość' }}
+      </button>
+    </div>
+  </div>
+</div>
