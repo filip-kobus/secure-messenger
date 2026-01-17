@@ -34,6 +34,12 @@ import { MessageService, Message, Attachment } from '../../services/message.serv
               {{ signatureVerified ? '✓ Zweryfikowany' : '✗ Niezweryfikowany' }}
             </span>
           </div>
+          <div class="info-row" *ngIf="!isInbox">
+            <strong>Status:</strong> 
+            <span [class]="message.is_read ? 'read-status' : 'unread-status'">
+              {{ message.is_read ? '✓ Odczytana' : '✗ Nieodczytana' }}
+            </span>
+          </div>
         </div>
 
         <div class="message-content">
@@ -152,6 +158,14 @@ import { MessageService, Message, Attachment } from '../../services/message.serv
 
     .not-verified {
       color: red;
+    }
+
+    .read-status {
+      color: green;
+    }
+
+    .unread-status {
+      color: orange;
     }
 
     .message-content {

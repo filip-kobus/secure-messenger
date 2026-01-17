@@ -45,7 +45,12 @@ import { MessageService, Message } from '../../services/message.service';
             <span class="date">{{ formatDate(message.created_at) }}</span>
           </div>
           <div class="message-preview">
-            {{ message.is_read ? '✓' : '✉' }} Zaszyfrowana wiadomość
+            <span *ngIf="activeTab === 'inbox'">
+              {{ message.is_read ? '✓' : '✉' }} Zaszyfrowana wiadomość
+            </span>
+            <span *ngIf="activeTab === 'sent'">
+              {{ message.is_read ? '✓ Odczytana' : '✉ Nieodczytana' }}
+            </span>
             <span *ngIf="message.attachments && message.attachments.length > 0">
               ({{ message.attachments.length }} załącznik<span *ngIf="message.attachments.length > 1">i/ów</span>)
             </span>
@@ -219,8 +224,8 @@ export class MessageListComponent implements OnInit {
   }
 
   loadMessages() {
-    // Ta metoda jest wywoływana przy zmianie zakładki - nie trzeba przeładowywać
-    // Bo już mamy dane załadowane z loadAllMessages()
+    // Przeładuj wiadomości przy zmianie zakładki aby odświeżyć status is_read
+    this.loadAllMessages();
   }
 
   viewMessage(message: Message) {

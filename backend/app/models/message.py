@@ -22,4 +22,7 @@ class Message(Base):
     is_read = Column(Boolean, default=False)
     read_at = Column(DateTime, nullable=True)
     
+    deleted_by_sender = Column(Boolean, default=False)
+    deleted_by_receiver = Column(Boolean, default=False)
+    
     attachments = relationship("Attachment", back_populates="message", cascade="all, delete-orphan")

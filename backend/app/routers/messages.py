@@ -117,5 +117,5 @@ async def delete_message_endpoint(
     if message.sender_id != current_user.id and message.receiver_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
     
-    await delete_message(db, message_id)
+    await delete_message(db, message_id, current_user.id)
     return {"status": "success", "message": "Message deleted"}

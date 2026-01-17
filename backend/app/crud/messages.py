@@ -26,6 +26,7 @@ async def get_inbox_messages(db: AsyncSession, receiver_id: int):
         select(Message, User.username)
         .join(User, Message.sender_id == User.id)
         .where(Message.receiver_id == receiver_id)
+        .where(Message.deleted_by_receiver == False)
         .options(selectinload(Message.attachments)) # Attachments still have relationship
         .order_by(Message.created_at.desc())
     )
@@ -40,6 +41,7 @@ async def get_sent_messages(db: AsyncSession, sender_id: int):
         select(Message, User.username)
         .join(User, Message.receiver_id == User.id)
         .where(Message.sender_id == sender_id)
+        .where(Message.deleted_by_sender == False)
         .options(selectinload(Message.attachments))
         .order_by(Message.created_at.desc())
     )
@@ -62,13 +64,28 @@ async def mark_message_read(db: AsyncSession, message_id: int):
     await db.commit()
 
 
-async def delete_message(db: AsyncSession, message_id: int):
+async def delete_message(db: AsyncSession, message_id: int, user_id: int):
+    """
+    Soft delete - oznacza wiadomość jako usuniętą dla danego użytkownika.
+    Fizycznie usuwa tylko gdy obydwaj użytkownicy usunęli wiadomość.
+    """
     query = select(Message).where(Message.id == message_id)
     result = await db.execute(query)
     message = result.scalar_one_or_none()
     
-    if message:
+    if not message:
+        return
+    
+    # Określ czy użytkownik jest nadawcą czy odbiorcą i ustaw odpowiednią flagę
+    if message.sender_id == user_id:
+        message.deleted_by_sender = True
+    elif message.receiver_id == user_id:
+        message.deleted_by_receiver = True
+    
+    # Jeśli obydwie strony usunęły wiadomość, usuń fizycznie
+    if message.deleted_by_sender and message.deleted_by_receiver:
         await db.delete(message)
-        await db.commit()
+    
+    await db.commit()
     
     return message
