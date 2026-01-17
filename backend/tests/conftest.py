@@ -6,7 +6,8 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.db import Base, get_db
-from app.models.user import User
+# Import all models to ensure they're registered with SQLAlchemy
+from app.models import User, Message, Attachment, RefreshToken  # noqa: F401
 from app.utils.password_hasher import hash_password
 
 # Baza testowa w pamięci
