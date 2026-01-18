@@ -99,7 +99,9 @@ export class MessageService {
       
       const success = await this.authService.unlockPrivateKey(password);
       if (!success) {
-        throw new Error('Nieprawidłowe hasło');
+        const error: any = new Error('Nieprawidłowe hasło');
+        error.invalidPassword = true;
+        throw error;
       }
       
       privateKey = await this.authService.getPrivateKey();
@@ -160,7 +162,9 @@ export class MessageService {
       
       const success = await this.authService.unlockPrivateKey(password);
       if (!success) {
-        throw new Error('Invalid password');
+        const error: any = new Error('Invalid password');
+        error.invalidPassword = true;
+        throw error;
       }
       
       privateKey = await this.authService.getPrivateKey();
@@ -241,7 +245,9 @@ export class MessageService {
       
       const success = await this.authService.unlockPrivateKey(password);
       if (!success) {
-        throw new Error('Invalid password');
+        const error: any = new Error('Invalid password');
+        error.invalidPassword = true;
+        throw error;
       }
       
       privateKey = await this.authService.getPrivateKey();

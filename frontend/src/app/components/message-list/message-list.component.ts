@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MessageService, Message } from '../../services/message.service';
 
 @Component({
@@ -19,10 +19,20 @@ export class MessageListComponent implements OnInit {
 
   constructor(
     private messageService: MessageService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit() {
+    this.route.queryParams.subscribe(params => {
+      if (params['error'] === 'invalid_password') {
+        this.error = 'Nieprawidłowe hasło. Spróbuj ponownie.';
+        this.router.navigate([], {
+          queryParams: {},
+          replaceUrl: true
+        });
+      }
+    });
     this.loadAllMessages();
   }
 

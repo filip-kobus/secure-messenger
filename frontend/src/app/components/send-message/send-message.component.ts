@@ -92,6 +92,10 @@ export class SendMessageComponent implements OnInit {
         this.router.navigate(['/messages']);
         return;
       }
+      if (err.invalidPassword) {
+        this.router.navigate(['/messages'], { queryParams: { error: 'invalid_password' } });
+        return;
+      }
       this.error = err.error?.detail || err.message || 'Błąd wysyłania wiadomości';
       this.loading = false;
     }

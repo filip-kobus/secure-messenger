@@ -82,6 +82,10 @@ export class ViewMessageComponent implements OnInit {
         this.router.navigate(['/messages']);
         return;
       }
+      if (err.invalidPassword) {
+        this.router.navigate(['/messages'], { queryParams: { error: 'invalid_password' } });
+        return;
+      }
       this.error = 'Błąd deszyfrowania wiadomości';
       this.loading = false;
     }
@@ -106,6 +110,10 @@ export class ViewMessageComponent implements OnInit {
     } catch (err: any) {
       if (err.cancelled) {
         this.router.navigate(['/messages']);
+        return;
+      }
+      if (err.invalidPassword) {
+        this.router.navigate(['/messages'], { queryParams: { error: 'invalid_password' } });
         return;
       }
       this.error = err.message || 'Błąd pobierania załącznika';
