@@ -12,6 +12,7 @@ dependencies = [
     "pyotp>=2.9.0",
     "python-jose>=3.5.0",
     "qrcode>=8.2",
+    "redis[hiredis]>=5.0.0",
     "slowapi>=0.1.9",
     "sqlalchemy>=2.0.44",
 ]

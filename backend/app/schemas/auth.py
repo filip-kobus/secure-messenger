@@ -15,6 +15,9 @@ class LoginRequest(BaseModel):
         max_length=6,
     )
 
+class LogoutRequest(BaseModel):
+    refresh_token: str
+
 class RegisterRequest(BaseModel):
     username: str = Field(
         min_length=UserCredentialsConfig.USERNAME_MIN_LENGTH,

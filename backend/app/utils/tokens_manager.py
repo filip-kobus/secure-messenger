@@ -3,12 +3,16 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt
 
 
-def create_access_token(data: dict, expires_delta: timedelta = None):
+def create_access_token(data: dict, refresh_token_id: str = None, expires_delta: timedelta = None):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=JWTConfig.ACCESS_EXPIRE_MINUTES)
     )
     to_encode.update({"exp": expire, "type": "access"})
+    
+    if refresh_token_id:
+        to_encode["refresh_token_id"] = refresh_token_id
+    
     return jwt.encode(to_encode, SECRET_KEY, algorithm=JWTConfig.ALGORITHM)
 
 
@@ -17,7 +21,9 @@ def create_refresh_token(data: dict, expires_delta: timedelta = None):
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(days=JWTConfig.REFRESH_EXPIRE_DAYS)
     )
-    to_encode.update({"exp": expire, "type": "refresh"})
+    import uuid
+    jti = str(uuid.uuid4())
+    to_encode.update({"exp": expire, "type": "refresh", "jti": jti})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=JWTConfig.ALGORITHM)
 
 
@@ -43,11 +49,11 @@ def is_token_expired(token: str) -> bool:
         return True
 
 
-def refresh_access_token(refresh_token: str) -> str | None:
+def refresh_access_token(refresh_token: str, refresh_token_id: str) -> str | None:
     payload = verify_token(refresh_token, "refresh")
     if not payload or is_token_expired(refresh_token):
         return None
     user_id = payload.get("sub")
     if not user_id:
         return None
-    return create_access_token({"sub": user_id})
+    return create_access_token({"sub": user_id}, refresh_token_id=refresh_token_id)

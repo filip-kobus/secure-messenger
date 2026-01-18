@@ -3,11 +3,13 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+import redis.asyncio as redis
+from unittest.mock import AsyncMock
 
 from app.main import app
 from app.db import Base, get_db
-# Import all models to ensure they're registered with SQLAlchemy
-from app.models import User, Message, Attachment, RefreshToken  # noqa: F401
+from app.dependencies import get_redis
+from app.models import User, Message, Attachment
 from app.utils.password_hasher import hash_password
 
 # Baza testowa w pamięci
@@ -48,8 +50,58 @@ async def db_session():
 
 
 @pytest_asyncio.fixture
-async def client(db_session: AsyncSession):
-    """FastAPI test client z nadpisaną bazą danych."""
+async def redis_session():
+    redis_mock = AsyncMock(spec=redis.Redis)
+    redis_mock.storage = {}
+    
+    async def mock_setex(key, time, value):
+        redis_mock.storage[key] = value
+    
+    async def mock_get(key):
+        return redis_mock.storage.get(key)
+    
+    async def mock_delete(*keys):
+        for key in keys:
+            redis_mock.storage.pop(key, None)
+    
+    async def mock_exists(key):
+        return 1 if key in redis_mock.storage else 0
+    
+    async def mock_sadd(key, *values):
+        if key not in redis_mock.storage:
+            redis_mock.storage[key] = set()
+        if isinstance(redis_mock.storage[key], str):
+            redis_mock.storage[key] = set()
+        for v in values:
+            redis_mock.storage[key].add(v)
+    
+    async def mock_smembers(key):
+        return redis_mock.storage.get(key, set())
+    
+    async def mock_srem(key, *values):
+        if key in redis_mock.storage and isinstance(redis_mock.storage[key], set):
+            for v in values:
+                redis_mock.storage[key].discard(v)
+    
+    async def mock_expire(key, time):
+        pass
+    
+    redis_mock.setex = mock_setex
+    redis_mock.get = mock_get
+    redis_mock.delete = mock_delete
+    redis_mock.exists = mock_exists
+    redis_mock.sadd = mock_sadd
+    redis_mock.smembers = mock_smembers
+    redis_mock.srem = mock_srem
+    redis_mock.expire = mock_expire
+    
+    yield redis_mock
+    redis_mock.storage.clear()
+
+
+@pytest_asyncio.fixture
+async def client(db_session: AsyncSession, redis_session):
+    """FastAPI test client z nadpisaną bazą danych i Redis."""
     from httpx import ASGITransport
     
     app.dependency_overrides.clear()
@@ -57,7 +109,11 @@ async def client(db_session: AsyncSession):
     async def override_get_db():
         yield db_session
     
+    async def override_get_redis():
+        return redis_session
+    
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_redis] = override_get_redis
     
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:

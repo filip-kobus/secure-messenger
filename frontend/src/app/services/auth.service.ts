@@ -77,13 +77,28 @@ export class AuthService {
   }
 
   logout(): Observable<any> {
-    sessionStorage.removeItem('secure_messenger_access_token');
-    localStorage.removeItem('secure_messenger_refresh_token');
-    sessionStorage.removeItem('secure_messenger_private_key');
-    this.currentUser = null;
+    const refreshToken = localStorage.getItem('secure_messenger_refresh_token');
     
-    // Logout teraz wymaga JWT tokena (nie refresh_token w query)
-    return this.http.post(`${this.apiUrl}/auth/logout`, {});
+    const logoutRequest = this.http.post(`${this.apiUrl}/auth/logout`, {
+      refresh_token: refreshToken
+    });
+    
+    logoutRequest.subscribe({
+      complete: () => {
+        sessionStorage.removeItem('secure_messenger_access_token');
+        localStorage.removeItem('secure_messenger_refresh_token');
+        sessionStorage.removeItem('secure_messenger_private_key');
+        this.currentUser = null;
+      },
+      error: () => {
+        sessionStorage.removeItem('secure_messenger_access_token');
+        localStorage.removeItem('secure_messenger_refresh_token');
+        sessionStorage.removeItem('secure_messenger_private_key');
+        this.currentUser = null;
+      }
+    });
+    
+    return logoutRequest;
   }
 
   async checkAuth(): Promise<boolean> {

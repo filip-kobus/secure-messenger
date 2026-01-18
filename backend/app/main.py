@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.dependencies import verify_access_token
+from app.dependencies import verify_access_token, close_redis
 from app.routers import users, auth, totp, messages
 from app.exceptions import ExceptionHandlers
 
@@ -20,6 +20,10 @@ origins = [
 ]
 
 app = FastAPI()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await close_redis()
 
 app.add_middleware(
     CORSMiddleware,

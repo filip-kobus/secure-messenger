@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from app.schemas.auth import LoginRequest, RegisterRequest
+from app.schemas.auth import LoginRequest, RegisterRequest, LogoutRequest
 from app.models.user import User
 from app.crud.users import get_user_by_email, create_user
 from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token, revoke_all_user_tokens
@@ -9,14 +9,22 @@ from app.config import RateLimitConfig
 from app.db import AsyncSession, get_db
 from app.utils.totp_manager import verify_totp_code, decrypt_totp_secret
 from app.utils.tokens_manager import create_access_token, create_refresh_token, refresh_access_token
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_redis
+import redis.asyncio as redis
+from app.utils.tokens_manager import verify_token
+import uuid
 
 router = APIRouter()
 
 
 @router.post("/auth/login", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_LOGIN)
-async def login(request: Request, login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login(
+    request: Request,
+    login_data: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+    redis_conn: redis.Redis = Depends(get_redis)
+):
     user = await get_user_by_email(db, login_data.email)
     if not user or not verify_password(login_data.password, user.password_hash):
         raise HTTPException(
@@ -42,12 +50,18 @@ async def login(request: Request, login_data: LoginRequest, db: AsyncSession = D
             status_code=status.HTTP_403_FORBIDDEN,
             detail="TOTP setup incomplete. Please enable 2FA."
         )
-    access_token = create_access_token({"sub": str(user.id)})
+    
+    refresh_token_id = str(uuid.uuid4())
     refresh_token = create_refresh_token({"sub": str(user.id)})
     
-    # Unieważnij wszystkie stare tokeny przed utworzeniem nowego
-    await revoke_all_user_tokens(db, user.id)
-    await add_refresh_token(db, user.id, refresh_token)
+    from app.utils.tokens_manager import verify_token
+    payload = verify_token(refresh_token, "refresh")
+    refresh_token_id = payload.get("jti")
+    
+    access_token = create_access_token({"sub": str(user.id)}, refresh_token_id=refresh_token_id)
+    
+    await revoke_all_user_tokens(redis_conn, user.id)
+    await add_refresh_token(redis_conn, user.id, refresh_token_id)
     
     return {
         "access_token": access_token,
@@ -90,20 +104,41 @@ async def register(request: Request, register_data: RegisterRequest, db: AsyncSe
 
 @router.post("/auth/refresh-token", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_REFRESH)
-async def refresh_token_endpoint(request: Request, refresh_token: str, db: AsyncSession = Depends(get_db)):
+async def refresh_token_endpoint(
+    request: Request,
+    refresh_token: str,
+    redis_conn: redis.Redis = Depends(get_redis)
+):
     print(f"[DEBUG] Refresh token request: {refresh_token[:50]}...")
     
-    db_token = await check_refresh_token(db, refresh_token)
-    print(f"[DEBUG] DB token found: {db_token is not None}")
+    from app.utils.tokens_manager import verify_token
+    payload = verify_token(refresh_token, "refresh")
+    if not payload:
+        print("[DEBUG] Invalid refresh token JWT")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
     
-    if not db_token or db_token.revoked:
-        print(f"[DEBUG] Token invalid or revoked. DB token exists: {db_token is not None}, Revoked: {db_token.revoked if db_token else 'N/A'}")
+    refresh_token_id = payload.get("jti")
+    if not refresh_token_id:
+        print("[DEBUG] Refresh token missing jti claim")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token format"
+        )
+    
+    user_id = await check_refresh_token(redis_conn, refresh_token_id)
+    print(f"[DEBUG] Redis token found: {user_id is not None}")
+    
+    if not user_id:
+        print("[DEBUG] Token not found in Redis or revoked")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or revoked refresh token"
         )
     
-    new_access_token = refresh_access_token(refresh_token)
+    new_access_token = refresh_access_token(refresh_token, refresh_token_id)
     print(f"[DEBUG] New access token created: {new_access_token is not None}")
     
     if not new_access_token:
@@ -122,11 +157,30 @@ async def refresh_token_endpoint(request: Request, refresh_token: str, db: Async
 @limiter.limit(RateLimitConfig.AUTH_REFRESH)
 async def logout(
     request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    body: LogoutRequest,
+    redis_conn: redis.Redis = Depends(get_redis)
 ):
-    """Wyloguj użytkownika - unieważnij wszystkie jego tokeny"""
-    await revoke_all_user_tokens(db, current_user.id)
+    refresh_token = body.refresh_token
+    payload = verify_token(refresh_token, "refresh")
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+    
+    user_id = payload.get("sub")
+    refresh_token_id = payload.get("jti")
+    
+    if not user_id or not refresh_token_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token format"
+        )
+    
+    print(f"[DEBUG logout] User {user_id} logging out")
+    await revoke_all_user_tokens(redis_conn, int(user_id))
+    print(f"[DEBUG logout] Tokens revoked for user {user_id}")
     return {"message": "Logged out successfully"}
 
 

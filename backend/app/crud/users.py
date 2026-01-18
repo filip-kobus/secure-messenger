@@ -1,5 +1,4 @@
 from app.models.user import User
-from app.models.refreshtoken import RefreshToken
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -32,16 +31,6 @@ async def create_user(db: AsyncSession, user: User) -> User:
     except SQLAlchemyError as e:
         await db.rollback()
         raise e
-
-async def add_refresh_token_to_user(
-    db: AsyncSession, user: User, refresh_token: str
-) -> None:
-    refresh_token = RefreshToken(
-        user_id=user.id,
-        token=refresh_token,
-    )
-    db.add(refresh_token)
-    await db.commit()
 
 async def list_usernames(db: AsyncSession) -> list[str]:
     result = await db.execute(select(User.username))

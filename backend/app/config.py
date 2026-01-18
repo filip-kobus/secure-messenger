@@ -4,9 +4,20 @@ import os
 load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable is not set")
+
 TOTP_ENCRYPTION_KEY = os.getenv("TOTP_ENCRYPTION_KEY")
+if not TOTP_ENCRYPTION_KEY:
+    raise ValueError("TOTP_ENCRYPTION_KEY environment variable is not set")
+
 DATABASE_URL = "sqlite+aiosqlite:///./db.sqlite3"
 IS_DEBUG_ENABLED = True
+
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_DB = int(os.getenv("REDIS_DB", "0"))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", None)
 
 
 class RateLimitConfig:
@@ -14,7 +25,7 @@ class RateLimitConfig:
     DEFAULT_LIMIT = "100/minute"
     AUTH_LOGIN = "5/minute"
     AUTH_REGISTER = "5/minute"
-    AUTH_REFRESH = "10/minute"
+    AUTH_REFRESH = "100/minute"
     MESSAGES_SEND = "20/minute"
     MESSAGES_FETCH = "60/minute"
     ADMIN = "10/minute"
