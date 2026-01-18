@@ -280,7 +280,8 @@ async def request_password_reset(
 async def reset_password(
     request: Request,
     reset_data: PasswordResetConfirm,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    redis_conn: redis.Redis = Depends(get_redis)
 ):
     try:
         payload = jwt.decode(reset_data.token, SECRET_KEY, algorithms=[JWTConfig.ALGORITHM])
@@ -311,6 +312,9 @@ async def reset_password(
         user.password_hash = hash_password(reset_data.new_password)
         user.public_key = reset_data.public_key
         user.encrypted_private_key = reset_data.encrypted_private_key
+
+        await revoke_all_user_tokens(redis_conn, int(user_id))
+
         await db.commit()
         
         logger.info(f"Password reset successful for user {user.email}")
