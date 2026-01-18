@@ -88,6 +88,10 @@ export class SendMessageComponent implements OnInit {
         this.router.navigate(['/messages']);
       }, 1500);
     } catch (err: any) {
+      if (err.cancelled) {
+        this.router.navigate(['/messages']);
+        return;
+      }
       this.error = err.error?.detail || err.message || 'Błąd wysyłania wiadomości';
       this.loading = false;
     }

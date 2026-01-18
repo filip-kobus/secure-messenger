@@ -69,17 +69,19 @@ export class ViewMessageComponent implements OnInit {
     this.message = message;
     
     try {
-      // Odszyfruj wiadomość (decryptMessage automatycznie wybierze odpowiedni klucz)
       this.decryptedContent = await this.messageService.decryptMessage(message);
       
-      // Zweryfikuj podpis
       this.signatureVerified = await this.messageService.verifyMessageSignature(
         message,
         this.decryptedContent
       );
       
       this.loading = false;
-    } catch (err) {
+    } catch (err: any) {
+      if (err.cancelled) {
+        this.router.navigate(['/messages']);
+        return;
+      }
       this.error = 'Błąd deszyfrowania wiadomości';
       this.loading = false;
     }
@@ -102,6 +104,10 @@ export class ViewMessageComponent implements OnInit {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err: any) {
+      if (err.cancelled) {
+        this.router.navigate(['/messages']);
+        return;
+      }
       this.error = err.message || 'Błąd pobierania załącznika';
       console.error('Download error:', err);
     } finally {

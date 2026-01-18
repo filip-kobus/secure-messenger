@@ -92,7 +92,9 @@ export class MessageService {
     if (!privateKey) {
       const password = await this.authService.promptForPassword();
       if (!password) {
-        throw new Error('Hasło jest wymagane do wysłania wiadomości');
+        const error: any = new Error('User cancelled');
+        error.cancelled = true;
+        throw error;
       }
       
       const success = await this.authService.unlockPrivateKey(password);
@@ -151,7 +153,9 @@ export class MessageService {
     if (!privateKey) {
       const password = await this.authService.promptForPassword();
       if (!password) {
-        throw new Error('Password required to decrypt message');
+        const error: any = new Error('User cancelled');
+        error.cancelled = true;
+        throw error;
       }
       
       const success = await this.authService.unlockPrivateKey(password);
@@ -230,7 +234,9 @@ export class MessageService {
     if (!privateKey) {
       const password = await this.authService.promptForPassword();
       if (!password) {
-        throw new Error('Password required to decrypt attachment');
+        const error: any = new Error('User cancelled');
+        error.cancelled = true;
+        throw error;
       }
       
       const success = await this.authService.unlockPrivateKey(password);

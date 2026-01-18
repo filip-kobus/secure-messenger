@@ -61,7 +61,7 @@ export class AuthService {
         
         const privateKeyExported = await window.crypto.subtle.exportKey('pkcs8', privateKey);
         const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyExported)));
-        sessionStorage.setItem('secure_messenger_private_key', privateKeyBase64);
+        sessionStorage.setItem('private_key', privateKeyBase64);
       }
       
       const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
@@ -76,11 +76,11 @@ export class AuthService {
     
     logoutRequest.subscribe({
       complete: () => {
-        sessionStorage.removeItem('secure_messenger_private_key');
+        sessionStorage.removeItem('private_key');
         this.currentUserSubject.next(null);
       },
       error: () => {
-        sessionStorage.removeItem('secure_messenger_private_key');
+        sessionStorage.removeItem('private_key');
         this.currentUserSubject.next(null);
       }
     });
@@ -113,7 +113,7 @@ export class AuthService {
   }
 
   async getPrivateKey(): Promise<CryptoKey | null> {
-    const privateKeyBase64 = sessionStorage.getItem('secure_messenger_private_key');
+    const privateKeyBase64 = sessionStorage.getItem('private_key');
     if (!privateKeyBase64) {
       return null;
     }
@@ -184,7 +184,7 @@ export class AuthService {
 
         const privateKeyExported = await window.crypto.subtle.exportKey('pkcs8', privateKey);
         const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyExported)));
-        sessionStorage.setItem('secure_messenger_private_key', privateKeyBase64);
+        sessionStorage.setItem('private_key', privateKeyBase64);
         
         return true;
       }
@@ -195,7 +195,7 @@ export class AuthService {
   }
 
   hasPrivateKey(): boolean {
-    return sessionStorage.getItem('secure_messenger_private_key') !== null;
+    return sessionStorage.getItem('private_key') !== null;
   }
 
   // Wyświetl modal z prośbą o hasło
@@ -227,7 +227,7 @@ export class AuthService {
       `;
 
       const title = document.createElement('h3');
-      title.textContent = 'Odblokuj wiadomość';
+      title.textContent = 'Weryfikacja tożsamości';
       title.style.cssText = 'margin-top: 0; color: #333;';
 
       const description = document.createElement('p');
