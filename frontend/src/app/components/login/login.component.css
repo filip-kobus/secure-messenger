@@ -47,9 +47,13 @@ button:hover:not(:disabled) {
   margin-bottom: 15px;
 }
 
-p {
-  text-align: center;
+.links {
   margin-top: 20px;
+}
+
+.links p {
+  text-align: center;
+  margin: 10px 0;
 }
 
 a {

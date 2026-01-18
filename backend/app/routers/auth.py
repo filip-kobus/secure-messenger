@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from app.schemas.auth import LoginRequest, RegisterRequest
+from app.schemas.auth import LoginRequest, RegisterRequest, PasswordResetRequest, PasswordResetConfirm
 from app.models.user import User
 from app.crud.users import get_user_by_email, create_user
 from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token, revoke_all_user_tokens
 from app.utils.password_hasher import verify_password, hash_password
 from app.utils.rate_limiter import limiter
-from app.config import RateLimitConfig
+from app.config import RateLimitConfig, SECRET_KEY, JWTConfig
 from app.db import AsyncSession, get_db
 from app.utils.totp_manager import verify_totp_code, decrypt_totp_secret
 from app.utils.tokens_manager import create_access_token, create_refresh_token, refresh_access_token
@@ -13,6 +13,9 @@ from app.dependencies import get_current_user, get_redis
 import redis.asyncio as redis
 from app.utils.tokens_manager import verify_token
 import uuid
+from loguru import logger
+from jose import jwt
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -128,12 +131,9 @@ async def refresh_token_endpoint(
             detail="Refresh token missing"
         )
     
-    print(f"[DEBUG] Refresh token request: {refresh_token[:50]}...")
-    
     from app.utils.tokens_manager import verify_token
     payload = verify_token(refresh_token, "refresh")
     if not payload:
-        print("[DEBUG] Invalid refresh token JWT")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token"
@@ -141,27 +141,22 @@ async def refresh_token_endpoint(
     
     refresh_token_id = payload.get("jti")
     if not refresh_token_id:
-        print("[DEBUG] Refresh token missing jti claim")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token format"
         )
     
     user_id = await check_refresh_token(redis_conn, refresh_token_id)
-    print(f"[DEBUG] Redis token found: {user_id is not None}")
     
     if not user_id:
-        print("[DEBUG] Token not found in Redis or revoked")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or revoked refresh token"
         )
     
     new_access_token = refresh_access_token(refresh_token, refresh_token_id)
-    print(f"[DEBUG] New access token created: {new_access_token is not None}")
     
     if not new_access_token:
-        print("[DEBUG] Failed to create new access token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token"
@@ -209,9 +204,7 @@ async def logout(
             detail="Invalid token format"
         )
     
-    print(f"[DEBUG logout] User {user_id} logging out")
     await revoke_all_user_tokens(redis_conn, int(user_id))
-    print(f"[DEBUG logout] Tokens revoked for user {user_id}")
     
     from fastapi import Response
     response = Response(content='{"message": "Logged out successfully"}', media_type="application/json")
@@ -254,3 +247,78 @@ async def unlock_private_key(
     return {
         "encrypted_private_key": current_user.encrypted_private_key
     }
+
+
+@router.post("/auth/request-password-reset", tags=["auth"])
+@limiter.limit(RateLimitConfig.AUTH_ATTEMPTS)
+async def request_password_reset(
+    request: Request,
+    reset_request: PasswordResetRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    user = await get_user_by_email(db, reset_request.email)
+    
+    if not user:
+        return {
+            "message": "Jeśli konto istnieje, wysłaliśmy link do resetowania hasła na podany adres email.",
+        }
+    
+    reset_token_data = {
+        "sub": str(user.id),
+        "email": user.email,
+        "exp": datetime.utcnow() + timedelta(hours=1)
+    }
+    reset_token = jwt.encode(reset_token_data, SECRET_KEY, algorithm=JWTConfig.ALGORITHM)
+    
+    # In a real application, you would send the reset link via email.
+    reset_response = f"Jeśli konto istnieje, wysłaliśmy link do resetowania hasła na podany adres email. (http://localhost:4200/reset-password?token={reset_token} na {user.email})"
+    
+    return {
+        "message": reset_response,
+    }
+
+
+@router.post("/auth/reset-password", tags=["auth"])
+@limiter.limit(RateLimitConfig.AUTH_ATTEMPTS)
+async def reset_password(
+    request: Request,
+    reset_data: PasswordResetConfirm,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        payload = jwt.decode(reset_data.token, SECRET_KEY, algorithms=[JWTConfig.ALGORITHM])
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        
+        if not user_id or not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid reset token"
+            )
+        
+        user = await get_user_by_email(db, email)
+        if not user or str(user.id) != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid reset token"
+            )
+        
+        user.password_hash = hash_password(reset_data.new_password)
+        user.public_key = reset_data.public_key
+        user.encrypted_private_key = reset_data.encrypted_private_key
+        await db.commit()
+        
+        logger.info(f"Password reset successful for user {user.email}")
+        
+        return {"message": "Password reset successful"}
+        
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token has expired"
+        )
+    except jwt.JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset token"
+        )

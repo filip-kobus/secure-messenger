@@ -336,4 +336,17 @@ export class AuthService {
       setTimeout(() => input.focus(), 100);
     });
   }
+
+  requestPasswordReset(email: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/request-password-reset`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string, publicKey: string, encryptedPrivateKey: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/auth/reset-password`, {
+      token,
+      new_password: newPassword,
+      public_key: publicKey,
+      encrypted_private_key: encryptedPrivateKey
+    });
+  }
 }

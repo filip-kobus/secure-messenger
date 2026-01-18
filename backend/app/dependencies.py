@@ -5,6 +5,7 @@ from sqlalchemy import select
 from app.models.user import User
 from jose import JWTError, jwt
 import redis.asyncio as redis
+from loguru import logger
 
 from app.config import SECRET_KEY, JWTConfig, REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD
 from app.db import get_db
@@ -41,19 +42,16 @@ async def verify_access_token(
         )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[JWTConfig.ALGORITHM])
-        print(f"Decoded JWT payload: {payload}")
         user_id: str = payload.get("sub")
         refresh_token_id: str = payload.get("refresh_token_id")
         
         if user_id is None:
-            print("Invalid token payload: 'sub' claim is missing")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload"
             )
         
         if not refresh_token_id:
-            print("Invalid token payload: 'refresh_token_id' claim is missing")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token format"
@@ -61,7 +59,6 @@ async def verify_access_token(
         
         token_exists = await redis_conn.exists(f"refresh_token:{refresh_token_id}")
         if not token_exists:
-            print(f"Refresh token {refresh_token_id} not found in Redis - user logged out")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Session expired or user logged out"
@@ -69,7 +66,7 @@ async def verify_access_token(
         
         return user_id
     except JWTError as e:
-        print(f"JWT Validation Error: {e}")
+        logger.error(f"JWT validation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired access token"

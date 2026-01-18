@@ -58,3 +58,32 @@ class TwoFactorVerifyRequest(BaseModel):
 class TwoFactorEnableResponse(BaseModel):
     secret: str
     qr_code: str
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr = Field(max_length=UserCredentialsConfig.EMAIL_MAX_LENGTH)
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str = Field(
+        min_length=UserCredentialsConfig.PASSWORD_MIN_LENGTH,
+        max_length=UserCredentialsConfig.PASSWORD_MAX_LENGTH,
+    )
+    public_key: str
+    encrypted_private_key: str
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if UserCredentialsConfig.REQUIRE_UPPERCASE and not re.search(r"[A-Z]", v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if UserCredentialsConfig.REQUIRE_LOWERCASE and not re.search(r"[a-z]", v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if UserCredentialsConfig.REQUIRE_DIGIT and not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        if UserCredentialsConfig.REQUIRE_SPECIAL and not re.search(
+            r"[!@#$%^&*(),.?\":{}|<>]", v
+        ):
+            raise ValueError("Password must contain at least one special character")
+        return v

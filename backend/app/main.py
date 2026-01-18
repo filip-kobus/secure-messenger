@@ -26,7 +26,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         csrf_token = request.cookies.get("XSRF-TOKEN")
         force_set_cookie = False
 
-        if request.url.path in ["/auth/login", "/auth/refresh-token", "/auth/register", "/auth/logout"]:
+        if request.url.path in ["/auth/login", "/auth/refresh-token", "/auth/register", "/auth/logout", "/auth/request-password-reset", "/auth/reset-password"]:
             response = await call_next(request)
             if request.url.path == "/auth/login" and not csrf_token:
                 csrf_token = str(uuid.uuid4())

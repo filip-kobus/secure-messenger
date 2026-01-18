@@ -16,11 +16,7 @@ async def add_refresh_token(redis_conn: redis.Redis, user_id: int, refresh_token
 
 
 async def check_refresh_token(redis_conn: redis.Redis, refresh_token_id: str) -> str | None:
-    print(f"[DEBUG check_refresh_token] Looking for token: {refresh_token_id}")
-    
     user_id = await redis_conn.get(f"refresh_token:{refresh_token_id}")
-    
-    print(f"[DEBUG check_refresh_token] Found token: {user_id is not None}")
     return user_id
 
 

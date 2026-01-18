@@ -5,7 +5,7 @@ from .config import DATABASE_URL, IS_DEBUG_ENABLED
 
 Base = declarative_base()
 
-engine = create_async_engine(DATABASE_URL, echo=IS_DEBUG_ENABLED)
+engine = create_async_engine(DATABASE_URL, echo=False)
 SessionLocal = async_sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False
 )
