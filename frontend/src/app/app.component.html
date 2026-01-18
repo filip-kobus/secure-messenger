@@ -1,8 +1,8 @@
 <div class="app">
-  <header *ngIf="currentUser">
+  <header>
     <div class="header-content">
       <h2>Secure Messenger</h2>
-      <div class="user-info">
+      <div class="user-info" *ngIf="currentUser">
         <span>{{ currentUser.username }}</span>
         <button (click)="logout()">Wyloguj</button>
       </div>

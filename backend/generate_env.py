@@ -1,8 +1,12 @@
 import secrets
 import os
+from cryptography.fernet import Fernet
 
 def generate_secret_key(length=64):
     return secrets.token_urlsafe(length)
+
+def generate_fernet_key():
+    return Fernet.generate_key().decode()
 
 def main():
     env_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -14,7 +18,7 @@ def main():
             return
     
     secret_key = generate_secret_key(64)
-    totp_key = generate_secret_key(64)
+    totp_key = generate_fernet_key()
     
     env_content = f"""SECRET_KEY={secret_key}
 TOTP_ENCRYPTION_KEY={totp_key}

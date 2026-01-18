@@ -22,7 +22,11 @@ export class AppComponent implements OnInit {
   async ngOnInit() {
     // Sprawdź auth przy starcie
     await this.authService.checkAuth();
-    this.currentUser = this.authService.getCurrentUser();
+    
+    // Subskrybuj zmiany użytkownika
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+    });
   }
 
   logout() {

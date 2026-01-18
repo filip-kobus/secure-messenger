@@ -19,6 +19,8 @@ async def send_message(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    if message_in.receiver_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot send message to yourself")
 
     query = select(User).where(User.id == message_in.receiver_id)
     result = await db.execute(query)

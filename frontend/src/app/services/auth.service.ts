@@ -21,7 +21,8 @@ interface User {
 })
 export class AuthService {
   private apiUrl = 'http://localhost:8000';
-  private currentUser: User | null = null;
+  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  public currentUser$ = this.currentUserSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -70,7 +71,8 @@ export class AuthService {
       }
       
       // Pobierz dane użytkownika
-      this.currentUser = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
+      const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
+      this.currentUserSubject.next(user);
     }
 
     return response!;
@@ -88,13 +90,13 @@ export class AuthService {
         sessionStorage.removeItem('secure_messenger_access_token');
         localStorage.removeItem('secure_messenger_refresh_token');
         sessionStorage.removeItem('secure_messenger_private_key');
-        this.currentUser = null;
+        this.currentUserSubject.next(null);
       },
       error: () => {
         sessionStorage.removeItem('secure_messenger_access_token');
         localStorage.removeItem('secure_messenger_refresh_token');
         sessionStorage.removeItem('secure_messenger_private_key');
-        this.currentUser = null;
+        this.currentUserSubject.next(null);
       }
     });
     
@@ -106,21 +108,22 @@ export class AuthService {
       if (!this.getToken() && this.getRefreshToken()) {
         const refreshed = await this.refreshToken();
         if (!refreshed) {
-          this.currentUser = null;
+          this.currentUserSubject.next(null);
           return false;
         }
       }
 
       // Sprawdź czy token jest ważny
       if (this.getToken()) {
-        this.currentUser = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
+        const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
+        this.currentUserSubject.next(user);
         return true;
       }
 
-      this.currentUser = null;
+      this.currentUserSubject.next(null);
       return false;
     } catch {
-      this.currentUser = null;
+      this.currentUserSubject.next(null);
       return false;
     }
   }
@@ -149,7 +152,7 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.currentUser !== null && this.getToken() !== null;
+    return this.currentUserSubject.value !== null && this.getToken() !== null;
   }
 
   getToken(): string | null {
@@ -185,16 +188,17 @@ export class AuthService {
   }
 
   getCurrentUser(): User | null {
-    return this.currentUser;
+    return this.currentUserSubject.value;
   }
 
   async getCurrentUserPublicKey(): Promise<string | null> {
-    if (!this.currentUser) {
+    const currentUser = this.currentUserSubject.value;
+    if (!currentUser) {
       return null;
     }
 
     try {
-      const response = await firstValueFrom(this.http.get<any>(`${this.apiUrl}/users/${this.currentUser.id}`));
+      const response = await firstValueFrom(this.http.get<any>(`${this.apiUrl}/users/${currentUser.id}`));
       return response?.public_key || null;
     } catch {
       return null;
@@ -265,7 +269,7 @@ export class AuthService {
       title.style.cssText = 'margin-top: 0; color: #333;';
 
       const description = document.createElement('p');
-      description.textContent = 'Podaj hasło aby odszyfrować wiadomość:';
+      description.textContent = 'Podaj hasło aby kontynuować:';
       description.style.cssText = 'color: #666; margin-bottom: 20px;';
 
       const input = document.createElement('input');

@@ -85,11 +85,28 @@ export class MessageService {
       );
     }
 
-    // Podpisz wiadomość
-    const privateKey = await this.authService.getPrivateKey();
+    // Sprawdź czy jest klucz prywatny
+    let privateKey = await this.authService.getPrivateKey();
+    
+    // Jeśli brak klucza prywatnego, poproś o hasło
     if (!privateKey) {
-      throw new Error('Private key not available');
+      const password = await this.authService.promptForPassword();
+      if (!password) {
+        throw new Error('Hasło jest wymagane do wysłania wiadomości');
+      }
+      
+      const success = await this.authService.unlockPrivateKey(password);
+      if (!success) {
+        throw new Error('Nieprawidłowe hasło');
+      }
+      
+      privateKey = await this.authService.getPrivateKey();
     }
+    
+    if (!privateKey) {
+      throw new Error('Klucz prywatny niedostępny');
+    }
+    
     const signature = await this.cryptoService.signMessage(content, privateKey);
 
     // Zaszyfruj załączniki

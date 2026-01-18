@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MessageService, User } from '../../services/message.service';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-send-message',
@@ -22,7 +23,8 @@ export class SendMessageComponent implements OnInit {
 
   constructor(
     private messageService: MessageService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -86,7 +88,7 @@ export class SendMessageComponent implements OnInit {
         this.router.navigate(['/messages']);
       }, 1500);
     } catch (err: any) {
-      this.error = err.error?.detail || 'Błąd wysyłania wiadomości';
+      this.error = err.error?.detail || err.message || 'Błąd wysyłania wiadomości';
       this.loading = false;
     }
   }

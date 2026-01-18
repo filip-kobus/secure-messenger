@@ -37,7 +37,7 @@
         accept="*/*">
       <div class="file-list" *ngIf="selectedFiles.length > 0">
         <div *ngFor="let file of selectedFiles; let i = index" class="file-item">
-          {{ file.name }} ({{ formatFileSize(file.size) }})
+          <span class="file-name">{{ file.name }} ({{ formatFileSize(file.size) }})</span>
           <button type="button" (click)="removeFile(i)">✕</button>
         </div>
       </div>
