@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
-from app.schemas.auth import LoginRequest, RegisterRequest, LogoutRequest
+from app.schemas.auth import LoginRequest, RegisterRequest
 from app.models.user import User
 from app.crud.users import get_user_by_email, create_user
 from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token, revoke_all_user_tokens
@@ -63,12 +63,25 @@ async def login(
     await revoke_all_user_tokens(redis_conn, user.id)
     await add_refresh_token(redis_conn, user.id, refresh_token_id)
     
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-        "encrypted_private_key": user.encrypted_private_key
-    }
+    from fastapi import Response
+    response = Response(content='{"encrypted_private_key": "' + user.encrypted_private_key + '"}', media_type="application/json")
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=3600
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=604800
+    )
+    return response
 
 
 @router.post("/auth/register", tags=["auth"])
@@ -106,9 +119,15 @@ async def register(request: Request, register_data: RegisterRequest, db: AsyncSe
 @limiter.limit(RateLimitConfig.AUTH_REFRESH)
 async def refresh_token_endpoint(
     request: Request,
-    refresh_token: str,
     redis_conn: redis.Redis = Depends(get_redis)
 ):
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token missing"
+        )
+    
     print(f"[DEBUG] Refresh token request: {refresh_token[:50]}...")
     
     from app.utils.tokens_manager import verify_token
@@ -147,20 +166,32 @@ async def refresh_token_endpoint(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token"
         )
-        
-    return {
-        "access_token": new_access_token,
-        "token_type": "bearer",
-    }
+    
+    from fastapi import Response
+    response = Response(content='{"message": "Token refreshed"}', media_type="application/json")
+    response.set_cookie(
+        key="access_token",
+        value=new_access_token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=3600
+    )
+    return response
 
 @router.post("/auth/logout", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_REFRESH)
 async def logout(
     request: Request,
-    body: LogoutRequest,
     redis_conn: redis.Redis = Depends(get_redis)
 ):
-    refresh_token = body.refresh_token
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token missing"
+        )
+    
     payload = verify_token(refresh_token, "refresh")
     
     if not payload:
@@ -181,7 +212,12 @@ async def logout(
     print(f"[DEBUG logout] User {user_id} logging out")
     await revoke_all_user_tokens(redis_conn, int(user_id))
     print(f"[DEBUG logout] Tokens revoked for user {user_id}")
-    return {"message": "Logged out successfully"}
+    
+    from fastapi import Response
+    response = Response(content='{"message": "Logged out successfully"}', media_type="application/json")
+    response.delete_cookie(key="access_token", samesite="lax")
+    response.delete_cookie(key="refresh_token", samesite="lax")
+    return response
 
 
 @router.get("/auth/me", tags=["auth"])
@@ -198,15 +234,17 @@ async def get_me(request: Request, current_user: User = Depends(get_current_user
 @limiter.limit(RateLimitConfig.AUTH_ATTEMPTS)
 async def unlock_private_key(
     request: Request,
-    password: str,
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Endpoint do ponownego pobrania encrypted_private_key.
-    Wymaga poprawnego hasła i ważnego JWT tokena.
-    Używany gdy użytkownik ma refresh_token ale stracił privateKey (np. po restarcie przeglądarki).
-    """
-    # Weryfikuj hasło
+    body = await request.json()
+    password = body.get("password")
+    
+    if not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is required"
+        )
+    
     if not verify_password(password, current_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

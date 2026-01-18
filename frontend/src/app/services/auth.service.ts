@@ -53,24 +53,17 @@ export class AuthService {
     }));
 
     if (response) {
-      // Zapisz tokeny
-      sessionStorage.setItem('secure_messenger_access_token', response.access_token);
-      localStorage.setItem('secure_messenger_refresh_token', response.refresh_token);  // localStorage - persistentny
-      
       if (response.encrypted_private_key) {
-        // Odszyfrowanie klucza prywatnego
         const privateKey = await this.cryptoService.decryptPrivateKey(
           response.encrypted_private_key,
           password
         );
         
-        // Zapisanie klucza prywatnego w sessionStorage
         const privateKeyExported = await window.crypto.subtle.exportKey('pkcs8', privateKey);
         const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyExported)));
         sessionStorage.setItem('secure_messenger_private_key', privateKeyBase64);
       }
       
-      // Pobierz dane użytkownika
       const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
       this.currentUserSubject.next(user);
     }
@@ -79,22 +72,14 @@ export class AuthService {
   }
 
   logout(): Observable<any> {
-    const refreshToken = localStorage.getItem('secure_messenger_refresh_token');
-    
-    const logoutRequest = this.http.post(`${this.apiUrl}/auth/logout`, {
-      refresh_token: refreshToken
-    });
+    const logoutRequest = this.http.post(`${this.apiUrl}/auth/logout`, {});
     
     logoutRequest.subscribe({
       complete: () => {
-        sessionStorage.removeItem('secure_messenger_access_token');
-        localStorage.removeItem('secure_messenger_refresh_token');
         sessionStorage.removeItem('secure_messenger_private_key');
         this.currentUserSubject.next(null);
       },
       error: () => {
-        sessionStorage.removeItem('secure_messenger_access_token');
-        localStorage.removeItem('secure_messenger_refresh_token');
         sessionStorage.removeItem('secure_messenger_private_key');
         this.currentUserSubject.next(null);
       }
@@ -105,24 +90,23 @@ export class AuthService {
 
   async checkAuth(): Promise<boolean> {
     try {
-      if (!this.getToken() && this.getRefreshToken()) {
+      const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
+      this.currentUserSubject.next(user);
+      return true;
+    } catch (error: any) {
+      if (error?.status === 401) {
         const refreshed = await this.refreshToken();
-        if (!refreshed) {
-          this.currentUserSubject.next(null);
-          return false;
+        if (refreshed) {
+          try {
+            const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
+            this.currentUserSubject.next(user);
+            return true;
+          } catch {
+            this.currentUserSubject.next(null);
+            return false;
+          }
         }
       }
-
-      // Sprawdź czy token jest ważny
-      if (this.getToken()) {
-        const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
-        this.currentUserSubject.next(user);
-        return true;
-      }
-
-      this.currentUserSubject.next(null);
-      return false;
-    } catch {
       this.currentUserSubject.next(null);
       return false;
     }
@@ -152,37 +136,17 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.currentUserSubject.value !== null && this.getToken() !== null;
-  }
-
-  getToken(): string | null {
-    return sessionStorage.getItem('secure_messenger_access_token');
-  }
-
-  getRefreshToken(): string | null {
-    return localStorage.getItem('secure_messenger_refresh_token');
+    return this.currentUserSubject.value !== null;
   }
 
   async refreshToken(): Promise<boolean> {
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) return false;
-
     try {
-      const response = await firstValueFrom(this.http.post<{access_token: string, token_type: string}>(
-        `${this.apiUrl}/auth/refresh-token?refresh_token=${refreshToken}`,
+      await firstValueFrom(this.http.post<{message: string}>(
+        `${this.apiUrl}/auth/refresh-token`,
         {}
       ));
-
-      if (response?.access_token) {
-        sessionStorage.setItem('secure_messenger_access_token', response.access_token);
-        return true;
-      }
-      return false;
+      return true;
     } catch (error: any) {
-      // Token wygasł - usuń
-      if (error?.status === 401 || error?.status === 403) {
-        localStorage.removeItem('secure_messenger_refresh_token');
-      }
       return false;
     }
   }
@@ -208,18 +172,16 @@ export class AuthService {
   async unlockPrivateKey(password: string): Promise<boolean> {
     try {
       const response = await firstValueFrom(this.http.post<{encrypted_private_key: string}>(
-        `${this.apiUrl}/auth/unlock-private-key?password=${password}`,
-        {}
+        `${this.apiUrl}/auth/unlock-private-key`,
+        { password }
       ));
 
       if (response?.encrypted_private_key) {
-        // Odszyfruj klucz prywatny
         const privateKey = await this.cryptoService.decryptPrivateKey(
           response.encrypted_private_key,
           password
         );
 
-        // Zapisz w sessionStorage
         const privateKeyExported = await window.crypto.subtle.exportKey('pkcs8', privateKey);
         const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyExported)));
         sessionStorage.setItem('secure_messenger_private_key', privateKeyBase64);

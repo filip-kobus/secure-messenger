@@ -1,16 +1,13 @@
 
-from fastapi import HTTPException, Depends, status
+from fastapi import HTTPException, Depends, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.models.user import User
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 import redis.asyncio as redis
 
 from app.config import SECRET_KEY, JWTConfig, REDIS_HOST, REDIS_PORT, REDIS_DB, REDIS_PASSWORD
 from app.db import get_db
-
-security = HTTPBearer()
 
 redis_client = None
 
@@ -33,11 +30,17 @@ async def close_redis():
         redis_client = None
 
 async def verify_access_token(
-    token: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
     redis_conn: redis.Redis = Depends(get_redis)
 ) -> str:
+    token = request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Access token missing"
+        )
     try:
-        payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[JWTConfig.ALGORITHM])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[JWTConfig.ALGORITHM])
         print(f"Decoded JWT payload: {payload}")
         user_id: str = payload.get("sub")
         refresh_token_id: str = payload.get("refresh_token_id")
