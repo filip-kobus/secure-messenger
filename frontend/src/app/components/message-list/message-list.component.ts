@@ -24,15 +24,6 @@ export class MessageListComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.route.queryParams.subscribe(params => {
-      if (params['error'] === 'invalid_password') {
-        this.error = 'Nieprawidłowe hasło. Spróbuj ponownie.';
-        this.router.navigate([], {
-          queryParams: {},
-          replaceUrl: true
-        });
-      }
-    });
     this.loadAllMessages();
   }
 
@@ -40,7 +31,6 @@ export class MessageListComponent implements OnInit {
     this.loading = true;
     this.error = '';
 
-    // Ładuj obie listy równolegle
     this.messageService.getInbox().subscribe({
       next: (messages) => {
         this.inbox = messages;
@@ -63,11 +53,18 @@ export class MessageListComponent implements OnInit {
   }
 
   loadMessages() {
-    // Przeładuj wiadomości przy zmianie zakładki aby odświeżyć status is_read
     this.loadAllMessages();
   }
 
   viewMessage(message: Message) {
+    // Sprawdź czy wiadomość jest odszyfrywalna
+    if (this.activeTab === 'inbox' && !message.is_decryptable_receiver) {
+      return; // Nie pozwalaj na otwarcie nieodszyfrowanej wiadomości w inbox
+    }
+    if (this.activeTab === 'sent' && !message.is_decryptable_sender) {
+      return; // Nie pozwalaj na otwarcie nieodszyfrowanej wiadomości w sent
+    }
+    
     this.router.navigate(['/messages', message.id]);
   }
 

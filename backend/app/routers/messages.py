@@ -63,6 +63,8 @@ async def get_inbox(
             signature=message.signature,
             created_at=message.created_at,
             is_read=message.is_read,
+            is_decryptable_receiver=message.is_decryptable_receiver,
+            is_decryptable_sender=message.is_decryptable_sender,
             attachments=attachment_responses
         ))
 
@@ -100,6 +102,8 @@ async def get_sent(
             encrypted_symmetric_key_sender=message.encrypted_symmetric_key_sender,
             signature=message.signature,
             created_at=message.created_at,
+            is_decryptable_receiver=message.is_decryptable_receiver,
+            is_decryptable_sender=message.is_decryptable_sender,
             is_read=message.is_read,
             attachments=attachment_responses
         ))

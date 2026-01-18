@@ -26,6 +26,8 @@ class MessageResponse(BaseModel):
     encrypted_symmetric_key_sender: str | None = None
     signature: str
     created_at: datetime
+    is_decryptable_receiver: bool
+    is_decryptable_sender: bool
     is_read: bool
     attachments: list["AttachmentResponse"]
 

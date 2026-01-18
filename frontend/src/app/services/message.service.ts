@@ -16,6 +16,8 @@ export interface Message {
   signature: string;
   is_read: boolean;
   created_at: string;
+  is_decryptable_receiver: boolean;
+  is_decryptable_sender: boolean;
   attachments?: Attachment[];
 }
 

@@ -24,5 +24,8 @@ class Message(Base):
     
     deleted_by_sender = Column(Boolean, default=False)
     deleted_by_receiver = Column(Boolean, default=False)
+
+    is_decryptable_sender = Column(Boolean, default=True)
+    is_decryptable_receiver = Column(Boolean, default=True)
     
     attachments = relationship("Attachment", back_populates="message", cascade="all, delete-orphan")

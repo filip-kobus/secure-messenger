@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from app.schemas.auth import LoginRequest, RegisterRequest, PasswordResetRequest, PasswordResetConfirm
 from app.models.user import User
 from app.crud.users import get_user_by_email, create_user
 from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token, revoke_all_user_tokens
 from app.utils.password_hasher import verify_password, hash_password
+from app.crud.messages import get_inbox_messages, get_sent_messages
 from app.utils.rate_limiter import limiter
 from app.config import RateLimitConfig, SECRET_KEY, JWTConfig
 from app.db import AsyncSession, get_db
@@ -57,7 +58,6 @@ async def login(
     refresh_token_id = str(uuid.uuid4())
     refresh_token = create_refresh_token({"sub": str(user.id)})
     
-    from app.utils.tokens_manager import verify_token
     payload = verify_token(refresh_token, "refresh")
     refresh_token_id = payload.get("jti")
     
@@ -66,7 +66,6 @@ async def login(
     await revoke_all_user_tokens(redis_conn, user.id)
     await add_refresh_token(redis_conn, user.id, refresh_token_id)
     
-    from fastapi import Response
     response = Response(content='{"encrypted_private_key": "' + user.encrypted_private_key + '"}', media_type="application/json")
     response.set_cookie(
         key="access_token",
@@ -162,7 +161,6 @@ async def refresh_token_endpoint(
             detail="Invalid or expired refresh token"
         )
     
-    from fastapi import Response
     response = Response(content='{"message": "Token refreshed"}', media_type="application/json")
     response.set_cookie(
         key="access_token",
@@ -206,7 +204,6 @@ async def logout(
     
     await revoke_all_user_tokens(redis_conn, int(user_id))
     
-    from fastapi import Response
     response = Response(content='{"message": "Logged out successfully"}', media_type="application/json")
     response.delete_cookie(key="access_token", samesite="lax")
     response.delete_cookie(key="refresh_token", samesite="lax")
@@ -297,6 +294,14 @@ async def reset_password(
             )
         
         user = await get_user_by_email(db, email)
+        sent_messages = await get_sent_messages(db, user.id) or []
+        inbox_messages = await get_inbox_messages(db, user.id) or []
+
+        for msg, _ in sent_messages:
+            msg.is_decryptable_sender = False
+        for msg, _ in inbox_messages:
+            msg.is_decryptable_receiver = False
+
         if not user or str(user.id) != user_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

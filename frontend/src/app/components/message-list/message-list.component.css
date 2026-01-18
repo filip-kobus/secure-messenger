@@ -75,6 +75,30 @@ button:hover {
   font-weight: bold;
 }
 
+.message.disabled {
+  background-color: #fff3cd;
+  border-left: 4px solid #dc3545;
+  color: #856404;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.message.disabled:hover {
+  background-color: #ffe69c;
+}
+
+.message.disabled .message-preview::before {
+  content: '🔒 ';
+  font-weight: bold;
+}
+
+.message.disabled .warning-text {
+  color: #dc3545;
+  font-size: 12px;
+  font-style: italic;
+  margin-top: 4px;
+}
+
 .message-header {
   display: flex;
   justify-content: space-between;
