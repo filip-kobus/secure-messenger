@@ -54,31 +54,29 @@ export class MessageService {
     content: string,
     files: File[] = []
   ): Promise<any> {
-    // Pobierz klucz publiczny odbiorcy
+    // Pobieram odbiorcę po username
     const recipient = await firstValueFrom(this.http.get<User>(
       `${this.apiUrl}/users/by-username/${recipientUsername}`
     ));
 
     if (!recipient) {
-      throw new Error('Recipient not found');
+      throw new Error('Odbiorca nie znaleziony');
     }
 
-    // Generuj klucz symetryczny
     const symmetricKey = await this.cryptoService.generateSymmetricKey();
 
-    // Zaszyfruj wiadomość
     const { encrypted: encryptedContent } = await this.cryptoService.encryptMessage(
       content,
       symmetricKey
     );
 
-    // Zaszyfruj klucz symetryczny kluczem publicznym odbiorcy
+    // Szyfruję klucz symetryczny kluczem publicznym odbiorcy
     const encryptedSymmetricKey = await this.cryptoService.encryptSymmetricKey(
       symmetricKey,
       recipient.public_key
     );
 
-    // Zaszyfruj klucz symetryczny SWOIM kluczem publicznym (dla nadawcy)
+    // Szyfruję klucz symetryczny kluczem publicznym nadawcy
     const senderPublicKey = await this.authService.getCurrentUserPublicKey();
     let encryptedSymmetricKeySender = undefined;
     if (senderPublicKey) {
@@ -151,7 +149,7 @@ export class MessageService {
   }
 
   async decryptMessage(message: Message): Promise<string> {
-    // Sprawdź czy jest klucz prywatny
+    // Sprawdzam czy jest klucz prywatny w local storage
     let privateKey = await this.authService.getPrivateKey();
     
     // Jeśli brak klucza prywatnego, poproś o hasło

@@ -144,6 +144,7 @@ export class AuthService {
     }
 
     try {
+      // Konwersja base64 na CryptoKey
       const privateKeyArray = Uint8Array.from(atob(privateKeyBase64), c => c.charCodeAt(0));
       return await window.crypto.subtle.importKey(
         'pkcs8',

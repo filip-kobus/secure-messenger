@@ -24,7 +24,6 @@ export class SendMessageComponent implements OnInit {
   constructor(
     private messageService: MessageService,
     private router: Router,
-    private authService: AuthService
   ) {}
 
   ngOnInit() {
