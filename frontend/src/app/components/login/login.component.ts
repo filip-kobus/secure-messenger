@@ -43,8 +43,8 @@ export class LoginComponent implements OnInit {
       );
 
       if (response) {
-        if (response.is_new_device) {
-          alert("Zauważyliśmy logowanie z nowego urządzenia. Jeśli to nie Ty, zalecamy zmianę hasła.");
+        if (response.message) {
+          console.log(response.message);
         }
         this.router.navigate(['/messages']);
       }
@@ -53,7 +53,10 @@ export class LoginComponent implements OnInit {
       if (err.status === 403 && err.error?.detail?.includes('2FA')) {
         this.requires2FA = true;
         this.error = 'Wprowadź kod 2FA';
-      } else {
+      } else if (err.status === 422) {
+        this.error = 'Format emaila lub hasła jest nieprawidłowy';
+      } 
+      else {
         this.error = err.error?.detail || 'Błąd logowania';
       }
       this.loading = false;

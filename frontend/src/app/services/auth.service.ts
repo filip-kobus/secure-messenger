@@ -6,7 +6,7 @@ import { environment } from '../../environments/environment';
 
 interface LoginResponse {
   encrypted_private_key: string;
-  is_new_device?: boolean;
+  message?: string;
 }
 
 interface User {
