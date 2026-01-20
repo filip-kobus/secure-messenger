@@ -5,9 +5,16 @@ import { Injectable } from '@angular/core';
 })
 export class CryptoService {
   
+  private get crypto(): SubtleCrypto {
+    if (!window.crypto || !window.crypto.subtle) {
+      throw new Error('Web Crypto API is not available. Please use HTTPS or localhost.');
+    }
+    return window.crypto.subtle;
+  }
+
   // Generowanie pary kluczy RSA 2048-bit
   async generateKeyPair(): Promise<{ publicKey: string; privateKey: CryptoKey }> {
-    const keyPair = await window.crypto.subtle.generateKey(
+    const keyPair = await this.crypto.generateKey(
       {
         name: 'RSA-OAEP',
         modulusLength: 2048,

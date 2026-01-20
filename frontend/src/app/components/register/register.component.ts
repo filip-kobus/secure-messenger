@@ -16,6 +16,7 @@ export class RegisterComponent implements OnInit {
   email = '';
   password = '';
   confirmPassword = '';
+  honeypot = '';
   error = '';
   success = '';
   loading = false;
@@ -49,7 +50,7 @@ export class RegisterComponent implements OnInit {
     this.loading = true;
 
     try {
-      await this.authService.register(this.username, this.email, this.password);
+      await this.authService.register(this.username, this.email, this.password, this.honeypot);
       this.success = 'Rejestracja zakończona pomyślnie! Przekierowanie...';
       setTimeout(() => {
         this.router.navigate(['/login']);

@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from app.schemas.auth import LoginRequest, RegisterRequest, PasswordResetRequest, PasswordResetConfirm
 from app.models.user import User
+from app.models.audit import LoginEvent, HoneypotEvent
+from sqlalchemy.future import select
 from app.crud.users import get_user_by_email, create_user
 from app.crud.tokens import add_refresh_token, check_refresh_token, revoke_refresh_token, revoke_all_user_tokens
 from app.utils.password_hasher import verify_password, hash_password
@@ -66,7 +68,44 @@ async def login(
     await revoke_all_user_tokens(redis_conn, user.id)
     await add_refresh_token(redis_conn, user.id, refresh_token_id)
     
-    response = Response(content='{"encrypted_private_key": "' + user.encrypted_private_key + '"}', media_type="application/json")
+    # Device Monitoring
+    user_agent = request.headers.get("user-agent", "unknown")
+    # Zmiana dla celów testowych: pobieramy IP z nagłówka X-Forwarded-For lub X-Test-IP, jeśli istnieje
+    ip_address = request.headers.get("X-Test-IP", request.headers.get("X-Forwarded-For", request.client.host))
+    
+    # 1. Sprawdź, czy użytkownik ma JAKĄKOLWIEK historię logowań (żeby nie straszyć przy pierwszym użyciu)
+    history_query = select(LoginEvent).where(LoginEvent.user_id == user.id).limit(1)
+    history_result = await db.execute(history_query)
+    has_history = history_result.scalars().first() is not None
+
+    # 2. Sprawdź, czy to konkretne urządzenie jest znane
+    query = select(LoginEvent).where(
+        LoginEvent.user_id == user.id,
+        LoginEvent.user_agent == user_agent,
+        LoginEvent.ip_address == ip_address
+    )
+    result = await db.execute(query)
+    existing_device = result.scalars().first()
+    
+    # Nowe urządzenie to takie, którego nie ma w bazie, ALE tylko jeśli użytkownik już kiedyś się logował
+    is_new_device = (existing_device is None) and has_history
+    
+    # Log the event
+    login_event = LoginEvent(
+        user_id=user.id,
+        ip_address=ip_address,
+        user_agent=user_agent,
+        is_new_device=is_new_device
+    )
+    db.add(login_event)
+    await db.commit()
+
+    import json
+    response_data = {"encrypted_private_key": user.encrypted_private_key}
+    if is_new_device:
+        response_data["is_new_device"] = True
+    
+    response = Response(content=json.dumps(response_data), media_type="application/json")
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -89,6 +128,18 @@ async def login(
 @router.post("/auth/register", tags=["auth"])
 @limiter.limit(RateLimitConfig.AUTH_REGISTER)
 async def register(request: Request, register_data: RegisterRequest, db: AsyncSession = Depends(get_db)):
+    if register_data.honeypot:
+        # Honeypot triggered
+        honeypot_event = HoneypotEvent(
+            ip_address=request.client.host,
+            user_agent=request.headers.get("user-agent"),
+            endpoint="/auth/register"
+        )
+        db.add(honeypot_event)
+        await db.commit()
+        # Return success to confuse the bot
+        return {"message": "User registered successfully"}
+
     try:
         existing_user = await get_user_by_email(db, register_data.email)
         if existing_user:

@@ -2,12 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, firstValueFrom } from 'rxjs';
 import { CryptoService } from './crypto.service';
+import { environment } from '../../environments/environment';
 
 interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  encrypted_private_key?: string;
+  encrypted_private_key: string;
+  is_new_device?: boolean;
 }
 
 interface User {
@@ -20,7 +19,7 @@ interface User {
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:8000';
+  private apiUrl = environment.apiUrl;
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
@@ -29,7 +28,7 @@ export class AuthService {
     private cryptoService: CryptoService
   ) {}
 
-  async register(username: string, email: string, password: string): Promise<any> {
+  async register(username: string, email: string, password: string, honeypot?: string): Promise<any> {
     // Generowanie pary kluczy RSA
     const { publicKey, privateKey } = await this.cryptoService.generateKeyPair();
     
@@ -41,7 +40,8 @@ export class AuthService {
       email,
       password,
       public_key: publicKey,
-      encrypted_private_key: encryptedPrivateKey
+      encrypted_private_key: encryptedPrivateKey,
+      honeypot: honeypot
     }));
   }
 
@@ -54,18 +54,26 @@ export class AuthService {
 
     if (response) {
       if (response.encrypted_private_key) {
-        const privateKey = await this.cryptoService.decryptPrivateKey(
-          response.encrypted_private_key,
-          password
-        );
-        
-        const privateKeyExported = await window.crypto.subtle.exportKey('pkcs8', privateKey);
-        const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyExported)));
-        sessionStorage.setItem('private_key', privateKeyBase64);
+        try {
+          const privateKey = await this.cryptoService.decryptPrivateKey(
+            response.encrypted_private_key,
+            password
+          );
+          
+          const privateKeyExported = await window.crypto.subtle.exportKey('pkcs8', privateKey);
+          const privateKeyBase64 = btoa(String.fromCharCode(...new Uint8Array(privateKeyExported)));
+          sessionStorage.setItem('private_key', privateKeyBase64);
+        } catch (error) {
+          console.error('Failed to decrypt private key:', error);
+        }
       }
       
-      const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
-      this.currentUserSubject.next(user);
+      try {
+        const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
+        this.currentUserSubject.next(user);
+      } catch (error) {
+        console.error('Failed to fetch user info:', error);
+      }
     }
 
     return response!;

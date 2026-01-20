@@ -992,6 +992,7 @@ dependencies = [
     { name = "redis", extra = ["hiredis"] },
     { name = "slowapi" },
     { name = "sqlalchemy" },
+    { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.optional-dependencies]
@@ -1020,6 +1021,7 @@ requires-dist = [
     { name = "redis", extras = ["hiredis"], specifier = ">=5.0.0" },
     { name = "slowapi", specifier = ">=0.1.9" },
     { name = "sqlalchemy", specifier = ">=2.0.44" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.6" },
 ]
 provides-extras = ["dev"]
 

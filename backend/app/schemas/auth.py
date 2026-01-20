@@ -48,6 +48,7 @@ class RegisterRequest(BaseModel):
     
     public_key: str = Field(description="RSA public key in PEM format")
     encrypted_private_key: str = Field(description="RSA private key encrypted with user password")
+    honeypot: Optional[str] = Field(None, description="Hidden field for bot detection")
 
 
 class TwoFactorVerifyRequest(BaseModel):

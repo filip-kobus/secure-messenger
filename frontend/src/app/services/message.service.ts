@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { CryptoService } from './crypto.service';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment';
 
 export interface Message {
   id: number;
@@ -40,7 +41,7 @@ export interface User {
   providedIn: 'root'
 })
 export class MessageService {
-  private apiUrl = 'http://localhost:8000';
+  private apiUrl = environment.apiUrl;
 
   constructor(
     private http: HttpClient,

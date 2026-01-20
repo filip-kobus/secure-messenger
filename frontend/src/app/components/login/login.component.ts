@@ -43,6 +43,9 @@ export class LoginComponent implements OnInit {
       );
 
       if (response) {
+        if (response.is_new_device) {
+          alert("Zauważyliśmy logowanie z nowego urządzenia. Jeśli to nie Ty, zalecamy zmianę hasła.");
+        }
         this.router.navigate(['/messages']);
       }
     } catch (err: any) {

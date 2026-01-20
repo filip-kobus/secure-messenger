@@ -4,7 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import uuid
 
 from app.dependencies import verify_access_token, close_redis
-from app.routers import users, auth, totp, messages
+from app.routers import users, auth, totp, messages, honeypot
 from app.exceptions import ExceptionHandlers
 
 from slowapi import _rate_limit_exceeded_handler
@@ -19,6 +19,7 @@ origins = [
     "http://localhost",
     "http://localhost:8080",
     "http://localhost:4200",
+    "http://192.168.0.249:4200",
 ]
 
 class CSRFMiddleware(BaseHTTPMiddleware):
@@ -35,7 +36,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                     value=csrf_token, 
                     httponly=False, 
                     samesite="lax",
-                    secure=False
+                    secure=False,
                 )
             return response
 
@@ -56,7 +57,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 value=csrf_token, 
                 httponly=False, 
                 samesite="lax",
-                secure=False
+                secure=False,
             )
             
         return response
@@ -86,6 +87,7 @@ app.include_router(messages.router, dependencies=[Depends(verify_access_token)])
 # Totp has inline dependency on get_current_user
 app.include_router(totp.router)
 app.include_router(auth.router)
+app.include_router(honeypot.router)
 
 
 @app.get("/")

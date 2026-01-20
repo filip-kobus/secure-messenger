@@ -16,6 +16,10 @@ npm start
 
 Aplikacja będzie dostępna pod adresem `http://localhost:4200`.
 
+## Uruchamianie w całej sieci:
+
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000
+
 ## Technologie
 
 - Angular 18+
