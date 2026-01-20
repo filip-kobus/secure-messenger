@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.models.audit import HoneypotEvent, LoginEvent
-from app.models.user import User
 
 async def create_honeypot_event(db: AsyncSession, ip_address: str, user_agent: str, endpoint: str):
     honeypot_event = HoneypotEvent(

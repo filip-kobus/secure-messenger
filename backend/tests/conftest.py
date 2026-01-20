@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock
 from app.main import app
 from app.db import Base, get_db
 from app.dependencies import get_redis
-from app.models import User, Message, Attachment
+from app.models import User
 from app.utils.password_hasher import hash_password
 
 # Baza testowa w pamięci

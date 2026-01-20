@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request, HTTPException, status
-from app.crud.users import list_usernames, get_user_by_username, get_user_by_id, list_all_users
+from app.crud.users import get_user_by_username, get_user_by_id, list_all_users
 from app.db import AsyncSession, get_db
 from app.utils.rate_limiter import limiter
 from app.config import RateLimitConfig

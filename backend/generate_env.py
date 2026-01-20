@@ -12,7 +12,7 @@ def main():
     env_path = os.path.join(os.path.dirname(__file__), '.env')
     
     if os.path.exists(env_path):
-        response = input(f".env already exists. Overwrite? (y/N): ")
+        response = input(".env already exists. Overwrite? (y/N): ")
         if response.lower() != 'y':
             print("Cancelled.")
             return
