@@ -20,14 +20,14 @@ async def send_message(
     db: AsyncSession = Depends(get_db)
 ):
     if message_in.receiver_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Cannot send message to yourself")
+        raise HTTPException(status_code=400, detail="Nie można wysłać wiadomości do samego siebie.")
 
     query = select(User).where(User.id == message_in.receiver_id)
     result = await db.execute(query)
     receiver = result.scalar_one_or_none()
     
     if not receiver:
-        raise HTTPException(status_code=404, detail="Receiver not found")
+        raise HTTPException(status_code=404, detail="Odbiorca nie znaleziony")
 
     message = await create_message(db, message_in, current_user.id)
     return {"message_id": message.id}
@@ -39,10 +39,8 @@ async def get_inbox(
 ):
     rows = await get_inbox_messages(db, current_user.id)
     
-    # rows contains (Message, sender_username)
     response = []
     for message, sender_username in rows:
-        # Map attachments to response schema
         attachment_responses = []
         if message.attachments:
             for att in message.attachments:
@@ -77,10 +75,8 @@ async def get_sent(
 ):
     rows = await get_sent_messages(db, current_user.id)
     
-    # rows contains (Message, receiver_username)
     response = []
     for message, receiver_username in rows:
-        # Map attachments to response schema
         attachment_responses = []
         if message.attachments:
             for att in message.attachments:
@@ -118,10 +114,10 @@ async def mark_as_read(
 ):
     message = await get_message_by_id(db, message_id)
     if not message:
-        raise HTTPException(status_code=404, detail="Message not found")
+        raise HTTPException(status_code=404, detail="Wiadomość nie znaleziona")
     
     if message.receiver_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(status_code=403, detail="Brak uprawnień")
         
     await mark_message_read(db, message_id)
     return {"status": "success"}
@@ -135,14 +131,13 @@ async def delete_message_endpoint(
 ):
     message = await get_message_by_id(db, message_id)
     if not message:
-        raise HTTPException(status_code=404, detail="Message not found")
+        raise HTTPException(status_code=404, detail="Wiadomość nie znaleziona")
     
-    # Użytkownik może usunąć wiadomość tylko jeśli jest jej nadawcą lub odbiorcą
     if message.sender_id != current_user.id and message.receiver_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(status_code=403, detail="Brak uprawnień")
     
     await delete_message(db, message_id, current_user.id)
-    return {"status": "success", "message": "Message deleted"}
+    return {"status": "success", "message": "Wiadomość usunięta"}
 
 
 @router.get("/attachments/{attachment_id}")
@@ -157,18 +152,15 @@ async def get_attachment(
     attachment = result.scalar_one_or_none()
     
     if not attachment:
-        raise HTTPException(status_code=404, detail="Attachment not found")
+        raise HTTPException(status_code=404, detail="Załącznik nie znaleziony")
     
-    # Sprawdź uprawnienia - pobierz wiadomość do której należy załącznik
     message = await get_message_by_id(db, attachment.message_id)
     if not message:
-        raise HTTPException(status_code=404, detail="Message not found")
+        raise HTTPException(status_code=404, detail="Wiadomość nie znaleziona")
     
-    # Użytkownik musi być nadawcą lub odbiorcą wiadomości
     if message.sender_id != current_user.id and message.receiver_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
+        raise HTTPException(status_code=403, detail="Brak uprawnień")
     
-    # Zwróć zaszyfrowaną zawartość jako base64
     encrypted_base64 = base64.b64encode(attachment.encrypted_data).decode('utf-8')
     
     return {

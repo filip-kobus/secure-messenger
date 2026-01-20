@@ -37,12 +37,18 @@ export class TotpSetupComponent implements OnInit {
         this.enabled = response.is_2fa_enabled;
         this.initialized = response.has_secret;
         this.loading = false;
+        console.log('TOTP status:', response);
+        if (this.initialized && !this.enabled) {
+          console.log('Initializing TOTP setup as it is not enabled yet.');
+          this.initializeTOTP();
+        }
       },
       error: (err) => {
         console.error('Error checking TOTP status:', err);
         this.loading = false;
       }
     });
+
   }
 
   initializeTOTP() {
