@@ -5,6 +5,7 @@
       <div class="user-info" *ngIf="currentUser">
         <span>{{ currentUser.username }}</span>
         <button (click)="logout()">Wyloguj</button>
+        <button (click)="logoutAllSessions()">Wyloguj ze wszystkich urządzeń</button>
       </div>
     </div>
   </header>

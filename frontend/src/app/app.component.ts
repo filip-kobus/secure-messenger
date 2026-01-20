@@ -39,4 +39,15 @@ export class AppComponent implements OnInit {
       }
     });
   }
+
+  logoutAllSessions() {
+    this.authService.logoutAllSessions().subscribe({
+      next: () => {
+        this.router.navigate(['/login']);
+      },
+      error: () => {
+        this.router.navigate(['/login']);
+      }
+    });
+  }
 }

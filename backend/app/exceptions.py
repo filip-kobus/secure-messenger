@@ -10,15 +10,15 @@ class ExceptionHandlers:
         if isinstance(exc, IntegrityError):
             return JSONResponse(
                 status_code=409,
-                content={"detail": "Data conflict. Resource may already exist."},
+                content={"detail": "Konflikt danych. Zasób może już istnieć."},
             )
         elif isinstance(exc, OperationalError):
             return JSONResponse(
                 status_code=503,
-                content={"detail": "Database unavailable. Please try again later."},
+                content={"detail": "Baza danych niedostępna. Proszę spróbować później."},
             )
         else:
             return JSONResponse(
                 status_code=500,
-                content={"detail": "A database error occurred."},
+                content={"detail": "Wystąpił błąd bazy danych."},
             )

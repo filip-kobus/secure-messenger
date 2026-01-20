@@ -3,15 +3,13 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt
 
 
-def create_access_token(data: dict, refresh_token_id: str = None, expires_delta: timedelta = None):
-    to_encode = data.copy()
+def create_access_token(user_id: str, refresh_token_id: str, expires_delta: timedelta = None):
+    to_encode = {"sub": str(user_id)}
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=JWTConfig.ACCESS_EXPIRE_MINUTES)
     )
-    to_encode.update({"exp": expire, "type": "access"})
-    
-    if refresh_token_id:
-        to_encode["refresh_token_id"] = refresh_token_id
+    to_encode.update({"sub": user_id, "exp": expire, "type": "access", "refresh_token_id": refresh_token_id})
+
     
     return jwt.encode(to_encode, SECRET_KEY, algorithm=JWTConfig.ALGORITHM)
 

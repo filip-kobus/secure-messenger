@@ -96,6 +96,23 @@ export class AuthService {
     return logoutRequest;
   }
 
+  logoutAllSessions(): Observable<any> {
+    const logoutAllRequest = this.http.post(`${this.apiUrl}/auth/logout-all`, {});
+
+    logoutAllRequest.subscribe({
+      complete: () => {
+        sessionStorage.removeItem('private_key');
+        this.currentUserSubject.next(null);
+      },
+      error: () => {
+        sessionStorage.removeItem('private_key');
+        this.currentUserSubject.next(null);
+      }
+    });
+
+    return logoutAllRequest;
+  }
+
   async checkAuth(): Promise<boolean> {
     try {
       const user = await firstValueFrom(this.http.get<User>(`${this.apiUrl}/auth/me`));
@@ -180,7 +197,7 @@ export class AuthService {
   async unlockPrivateKey(password: string): Promise<boolean> {
     try {
       const response = await firstValueFrom(this.http.post<{encrypted_private_key: string}>(
-        `${this.apiUrl}/auth/unlock-private-key`,
+        `${this.apiUrl}/auth/get-private-key`,
         { password }
       ));
 

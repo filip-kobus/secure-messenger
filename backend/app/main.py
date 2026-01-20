@@ -64,12 +64,6 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
 app = FastAPI()
 
-app.add_middleware(CSRFMiddleware)
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await close_redis()
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -77,6 +71,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(CSRFMiddleware)
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await close_redis()
+
 app.state.limiter = limiter
 
 app.add_exception_handler(SQLAlchemyError, ExceptionHandlers.sqlalchemy_exception_handler)

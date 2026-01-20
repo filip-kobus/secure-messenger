@@ -38,7 +38,7 @@ async def verify_access_token(
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Access token missing"
+            detail="Brak tokenu dostępu"
         )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[JWTConfig.ALGORITHM])
@@ -48,20 +48,20 @@ async def verify_access_token(
         if user_id is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload"
+                detail="Nieprawidłowa zawartość tokenu"
             )
         
         if not refresh_token_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token format"
+                detail="Nieprawidłowy format tokenu"
             )
         
         token_exists = await redis_conn.exists(f"refresh_token:{refresh_token_id}")
         if not token_exists:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Session expired or user logged out"
+                detail="Sesja wygasła lub użytkownik się wylogował"
             )
         
         return user_id
@@ -69,7 +69,7 @@ async def verify_access_token(
         logger.error(f"JWT validation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired access token"
+            detail="Nieprawidłowy lub wygasły token dostępu"
         )
 
 async def get_current_user(
@@ -84,6 +84,6 @@ async def get_current_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
+            detail="Użytkownik nie znaleziony"
         )
     return user
