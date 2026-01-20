@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: secure-messenger-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - secure-messenger-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: secure-messenger-backend
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "8000:80"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - secure-messenger-network
+    volumes:
+      - ./backend/db.sqlite3:/app/db.sqlite3
+      - ./backend/.env:/app/.env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: secure-messenger-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    networks:
+      - secure-messenger-network
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    container_name: secure-messenger-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - secure-messenger-network
+
+networks:
+  secure-messenger-network:
+    driver: bridge

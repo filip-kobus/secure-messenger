@@ -1,0 +1,14 @@
+**/.git
+**/.gitignore
+**/.vscode
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/node_modules
+**/dist
+**/.angular
+**/coverage
+**/.env
+**/db.sqlite3
