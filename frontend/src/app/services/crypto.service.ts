@@ -177,7 +177,7 @@ export class CryptoService {
 
   // Szyfrowanie klucza symetrycznego kluczem publicznym RSA odbiorcy
   async encryptSymmetricKey(symmetricKey: CryptoKey, publicKeyPEM: string): Promise<string> {
-    const publicKey = await this.importPublicKey(publicKeyPEM);
+    const publicKey = await this.importPublicKey(publicKeyPEM, ['encrypt'], 'RSA-OAEP');
     const symmetricKeyExported = await window.crypto.subtle.exportKey('raw', symmetricKey);
     
     const encrypted = await window.crypto.subtle.encrypt(
@@ -245,7 +245,7 @@ export class CryptoService {
       const data = encoder.encode(message);
       const signatureArray = Uint8Array.from(atob(signature), c => c.charCodeAt(0));
       
-      const publicKey = await this.importPublicKeyForVerification(publicKeyPEM);
+      const publicKey = await this.importPublicKey(publicKeyPEM, ['verify'], 'RSA-PSS');
       
       return await window.crypto.subtle.verify(
         {
@@ -257,7 +257,7 @@ export class CryptoService {
         data
       );
     } catch (e) {
-      return false;
+      throw Error('Verification failed');
     }
   }
 
@@ -310,7 +310,7 @@ export class CryptoService {
     return `-----BEGIN ${label}-----\n${formatted}\n-----END ${label}-----`;
   }
 
-  private async importPublicKey(pem: string): Promise<CryptoKey> {
+  private async importPublicKey(pem: string, usages: KeyUsage[], algorithmName: 'RSA-OAEP' | 'RSA-PSS'): Promise<CryptoKey> {
     const pemContents = pem
       .replace(/-----BEGIN PUBLIC KEY-----/, '')
       .replace(/-----END PUBLIC KEY-----/, '')
@@ -321,30 +321,11 @@ export class CryptoService {
       'spki',
       binaryDer,
       {
-        name: 'RSA-OAEP',
+        name: algorithmName,
         hash: 'SHA-256'
       },
       true,
-      ['encrypt']
-    );
-  }
-
-  private async importPublicKeyForVerification(pem: string): Promise<CryptoKey> {
-    const pemContents = pem
-      .replace(/-----BEGIN PUBLIC KEY-----/, '')
-      .replace(/-----END PUBLIC KEY-----/, '')
-      .replace(/\s/g, '');
-    const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-
-    return await window.crypto.subtle.importKey(
-      'spki',
-      binaryDer,
-      {
-        name: 'RSA-PSS',
-        hash: 'SHA-256'
-      },
-      true,
-      ['verify']
+      usages
     );
   }
 }

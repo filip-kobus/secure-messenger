@@ -1,0 +1,10 @@
+customModes:
+  - slug: review
+    name: Review
+    roleDefinition: Pay attention to security details both in backend, frontend and nignx, seek for redundant or inefecient code, indicate possbile problems and compare with given requirements.
+    groups:
+      - read
+      - browser
+      - command
+      - mcp
+    source: project

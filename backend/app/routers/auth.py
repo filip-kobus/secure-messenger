@@ -339,8 +339,7 @@ async def request_password_reset(
     }
     reset_token = jwt.encode(reset_token_data, SECRET_KEY, algorithm=JWTConfig.ALGORITHM)
     
-    # TODO: zastanwowić się na jaki base url tutaj wskazywać
-    reset_response = f"Jeśli konto istnieje, wysłaliśmy link do resetowania hasła na podany adres email. (http://localhost:4200/reset-password?token={reset_token} na {user.email})"
+    reset_response = f"Jeśli konto istnieje, wysłaliśmy link do resetowania hasła na podany adres email. (https://localhost/reset-password?token={reset_token} na {user.email})"
     
     return {
         "message": reset_response,
