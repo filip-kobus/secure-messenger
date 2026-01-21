@@ -100,7 +100,7 @@ async def login(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=False,
+        secure=True,
         samesite="lax",
         max_age=3600
     )
@@ -108,7 +108,7 @@ async def login(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,
+        secure=True,
         samesite="lax",
         max_age=604800
     )
@@ -203,7 +203,7 @@ async def refresh_token_endpoint(
         key="access_token",
         value=new_access_token,
         httponly=True,
-        secure=False,
+        secure=True,
         samesite="lax",
         max_age=3600
     )

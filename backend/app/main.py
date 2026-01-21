@@ -36,7 +36,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                     value=csrf_token, 
                     httponly=False, 
                     samesite="lax",
-                    secure=False,
+                    secure=True,
                 )
             return response
 
@@ -57,7 +57,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 value=csrf_token, 
                 httponly=False, 
                 samesite="lax",
-                secure=False,
+                secure=True,
             )
             
         return response
