@@ -24,8 +24,6 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-    ports:
-      - "8000:80"
     depends_on:
       redis:
         condition: service_healthy
@@ -46,8 +44,6 @@ services:
       dockerfile: Dockerfile
     container_name: secure-messenger-frontend
     restart: unless-stopped
-    ports:
-      - "4200:80"
     networks:
       - secure-messenger-network
     depends_on:

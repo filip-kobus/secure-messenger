@@ -8,7 +8,7 @@ COPY . /app
 
 # Install the application dependencies.
 WORKDIR /app
-RUN uv sync --locked --no-cache
+RUN uv sync --no-cache
 
 # Run the application.
-CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--port", "80"]
+CMD ["/bin/sh", "-c", "/app/.venv/bin/gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:80"]

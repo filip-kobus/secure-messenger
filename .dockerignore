@@ -7,6 +7,7 @@
 **/*.pyo
 **/*.pyd
 **/node_modules
+**/.venv
 **/dist
 **/.angular
 **/coverage

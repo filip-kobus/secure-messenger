@@ -1,2 +1,3 @@
 # Global gitignore
 .vscode/
+*.pem
