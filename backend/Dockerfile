@@ -11,4 +11,4 @@ WORKDIR /app
 RUN uv sync --no-cache
 
 # Run the application.
-CMD ["/bin/sh", "-c", "/app/.venv/bin/gunicorn app.main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:80"]
+CMD ["/bin/sh", "-c", "uv run uvicorn app.main:app --host 0.0.0.0 --port 80 --workers 4"]
