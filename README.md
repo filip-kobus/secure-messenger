@@ -4,4 +4,4 @@
 docker-compose up -d --build
 ```
 
-Your app will be availabe at https://localhost.
+Your app will be available at https://localhost.
