@@ -75,7 +75,7 @@ export class CryptoService {
     combined.set(iv, salt.length);
     combined.set(new Uint8Array(encrypted), salt.length + iv.length);
 
-    return btoa(String.fromCharCode(...combined));
+    return this.arrayBufferToBase64(combined);
   }
 
   // Deszyfrowanie klucza prywatnego hasłem użytkownika
@@ -153,7 +153,7 @@ export class CryptoService {
     combined.set(new Uint8Array(encrypted), iv.length);
 
     return {
-      encrypted: btoa(String.fromCharCode(...combined))
+      encrypted: this.arrayBufferToBase64(combined)
     };
   }
 
@@ -186,7 +186,7 @@ export class CryptoService {
       symmetricKeyExported
     );
 
-    return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+    return this.arrayBufferToBase64(new Uint8Array(encrypted));
   }
 
   // Deszyfrowanie klucza symetrycznego kluczem prywatnym RSA
@@ -235,7 +235,7 @@ export class CryptoService {
       data
     );
 
-    return btoa(String.fromCharCode(...new Uint8Array(signature)));
+    return this.arrayBufferToBase64(new Uint8Array(signature));
   }
 
   // Weryfikacja podpisu RSA-PSS
@@ -277,14 +277,8 @@ export class CryptoService {
     combined.set(iv, 0);
     combined.set(new Uint8Array(encrypted), iv.length);
 
-    // Konwersja na base64 bez spread operator (unika stack overflow dla dużych plików)
-    let binary = '';
-    for (let i = 0; i < combined.length; i++) {
-      binary += String.fromCharCode(combined[i]);
-    }
-
     return {
-      encrypted: btoa(binary)
+      encrypted: this.arrayBufferToBase64(combined)
     };
   }
 
@@ -305,9 +299,13 @@ export class CryptoService {
 
   // Pomocnicze metody
   private arrayBufferToPEM(buffer: ArrayBuffer, label: string): string {
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const base64 = this.arrayBufferToBase64(new Uint8Array(buffer));
     const formatted = base64.match(/.{1,64}/g)?.join('\n') || base64;
     return `-----BEGIN ${label}-----\n${formatted}\n-----END ${label}-----`;
+  }
+
+  private arrayBufferToBase64(buffer: Uint8Array): string {
+    return btoa(String.fromCharCode.apply(null, buffer as unknown as number[]));
   }
 
   private async importPublicKey(pem: string, usages: KeyUsage[], algorithmName: 'RSA-OAEP' | 'RSA-PSS'): Promise<CryptoKey> {
