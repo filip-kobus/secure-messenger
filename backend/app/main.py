@@ -14,52 +14,34 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 origins = [
-    "http://localhost.tiangolo.com",
-    "https://localhost.tiangolo.com",
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:4200",
-    "http://192.168.0.249:4200",
+    "https://localhost",
 ]
 
 class CSRFMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         csrf_token = request.cookies.get("XSRF-TOKEN")
-        force_set_cookie = False
-
-        if request.url.path in ["/auth/login", "/auth/refresh-token", "/auth/register", "/auth/logout", "/auth/request-password-reset", "/auth/reset-password"]:
-            response = await call_next(request)
-            if request.url.path == "/auth/login" and not csrf_token:
-                csrf_token = str(uuid.uuid4())
-                response.set_cookie(
-                    key="XSRF-TOKEN", 
-                    value=csrf_token, 
-                    httponly=False, 
-                    samesite="lax",
-                    secure=True,
-                )
-            return response
+        set_cookie = False
 
         if not csrf_token:
             csrf_token = str(uuid.uuid4())
-            force_set_cookie = True
+            set_cookie = True
 
         if request.method not in ["GET", "HEAD", "OPTIONS", "TRACE"]:
             csrf_header = request.headers.get("X-XSRF-TOKEN")
             if not csrf_header or csrf_header != csrf_token:
-                return Response(content="CSRF Token mismatch or missing", status_code=403)
+                return Response(content="Brak tokenu CSRF", status_code=403)
 
         response = await call_next(request)
 
-        if force_set_cookie:
+        if set_cookie:
             response.set_cookie(
-                key="XSRF-TOKEN", 
-                value=csrf_token, 
-                httponly=False, 
+                key="XSRF-TOKEN",
+                value=csrf_token,
+                httponly=False,
                 samesite="lax",
                 secure=True,
             )
-            
+
         return response
 
 app = FastAPI()
@@ -68,8 +50,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Authorization", "Content-Type", "X-XSRF-TOKEN"],
 )
 
 app.add_middleware(CSRFMiddleware)
