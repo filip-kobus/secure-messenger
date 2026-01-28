@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+import asyncio
+import random
 from app.schemas.auth import LoginRequest, RegisterRequest, PasswordResetRequest, PasswordResetConfirm
 from app.models.user import User
 from app.models.audit import HoneypotEvent
@@ -33,8 +35,9 @@ async def login(
     redis_conn: redis.Redis = Depends(get_redis)
 ):
     user = await get_user_by_email(db, login_data.email)
+    await asyncio.sleep(random.uniform(0.02, 0.1))
+    fake_hash = hash_password("fake_password")
     if not user:
-        fake_hash = hash_password("fake_password")
         verify_password(login_data.password, fake_hash)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -130,12 +133,13 @@ async def register(request: Request, register_data: RegisterRequest, db: AsyncSe
         return {"message": "Użytkownik zarejestrowany pomyślnie"}
 
     try:
+        hashed_password = hash_password(register_data.password)
         existing_user = await get_user_by_email(db, register_data.email)
+        await asyncio.sleep(random.uniform(0.02, 0.1))
         if existing_user:
             # Zwracam ogólną odpowiedź, aby nie zdradzać istnienia konta
             return {"message": "Użytkownik zarejestrowany pomyślnie"}
         
-        hashed_password = hash_password(register_data.password)
         user = User(
             username=register_data.username,
             email=register_data.email,
@@ -298,20 +302,6 @@ async def unlock_private_key(
     request: Request,
     current_user: User = Depends(get_current_user)
 ):
-    body = await request.json()
-    password = body.get("password")
-    
-    if not password:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password is required"
-        )
-    
-    if not verify_password(password, current_user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid password"
-        )
     
     return {
         "encrypted_private_key": current_user.encrypted_private_key

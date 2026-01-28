@@ -1,6 +1,7 @@
 from app.config import JWTConfig, SECRET_KEY
 from datetime import datetime, timedelta, timezone
 from jose import jwt
+import uuid
 
 
 def create_access_token(user_id: str, refresh_token_id: str, expires_delta: timedelta = None):
@@ -19,7 +20,7 @@ def create_refresh_token(data: dict, expires_delta: timedelta = None):
     expire = datetime.now(timezone.utc) + (
         expires_delta or timedelta(days=JWTConfig.REFRESH_EXPIRE_DAYS)
     )
-    import uuid
+    
     jti = str(uuid.uuid4())
     to_encode.update({"exp": expire, "type": "refresh", "jti": jti})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=JWTConfig.ALGORITHM)
