@@ -78,7 +78,7 @@ async def login(
     
     # Monitorowanie logowania
     user_agent = request.headers.get("user-agent", "unknown")
-    ip_address = request.headers.get("X-Forwarded-For") or request.client.host
+    ip_address = request.headers.get("X-Forwarded-For")
     
     login_event = await log_login_event(
         db,

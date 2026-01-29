@@ -13,6 +13,7 @@ export class CryptoService {
   }
 
   // Generowanie pary kluczy RSA 2048-bit
+  // Wykładnik RSA ustawiony na 65537
   async generateKeyPair(): Promise<{ publicKey: string; privateKey: CryptoKey }> {
     const keyPair = await this.crypto.generateKey(
       {

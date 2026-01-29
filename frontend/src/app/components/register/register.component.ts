@@ -56,8 +56,13 @@ export class RegisterComponent implements OnInit {
         this.router.navigate(['/login']);
       }, 2000);
     } catch (err: any) {
-      this.error = err.error?.detail || 'Błąd rejestracji';
-      this.loading = false;
+      if (err.detail && Array.isArray(err.detail) && err.detail[0]?.msg) {
+        this.error = err.detail[0].msg;
+      } else if (typeof err.detail === 'string') {
+        this.error = err.detail;
+      } else {
+        this.error = 'Błąd rejestracji';
+      }
     }
   }
 }
